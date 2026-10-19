@@ -13,11 +13,13 @@ export const useDemoState = create<{
   mission: MissionSnapshot | undefined; missionStarted: number;
   missionRobotId: string; plan: {id:string;objective:string;steps:MissionStep[];verification:string}|null;
   bookmarks: BookmarkList;
+  preview?: any;
 }>(() => ({
-  time: 0, paused: false, courseLoaded: false, provider: 'mock', mission: undefined,
+  time: 0, paused: false, courseLoaded: false, provider: 'gemini', mission: undefined,
   missionStarted: 0, missionRobotId: 'bot-01', plan: null,
   bookmarks: { revision: 'demo-1', scope: 'browser demo', items: {
     Home: { label: 'Home', pose: [0,0,0], visual_target: '', available: true, reason: '' },
     Terminal: { label: 'Terminal', pose: [1.9,2.1,0], visual_target: 'Synthetic terminal', available: true, reason: '' },
   } },
+  preview: undefined,
 }));

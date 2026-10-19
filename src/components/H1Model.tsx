@@ -7,7 +7,20 @@ import { Quaternion, SkinnedMesh } from 'three';
 import { applyH1Pose, bindH1Rig } from '../telemetry/h1Rig';
 import { getJointFrame, getJointFreshness, getPoseFrame, getPoseFreshness } from '../telemetry/jointStream';
 
-const H1_MODEL_PATH = (import.meta.env.BASE_URL || './').replace(/\/+$/, '') + '/models/h1/h1.glb';
+function resolveModelUrl(relativePath: string): string {
+  if (typeof window === 'undefined') return relativePath;
+  const base = import.meta.env.BASE_URL || './';
+  if (base.startsWith('http://') || base.startsWith('https://')) {
+    return new URL(relativePath, base.endsWith('/') ? base : base + '/').href;
+  }
+  const docBase = document.baseURI || window.location.href;
+  const path = docBase.split('?')[0].split('#')[0];
+  const dir = path.endsWith('/') ? path : path.substring(0, path.lastIndexOf('/') + 1);
+  return new URL(relativePath.replace(/^\.?\//, ''), dir).href;
+}
+
+export const H1_MODEL_PATH = resolveModelUrl('models/h1/h1.glb');
+useGLTF.preload(H1_MODEL_PATH);
 
 function RiggedH1({ robotId, selected, enabled }: { robotId:string; selected:boolean; enabled:boolean }) {
   const { scene } = useGLTF(H1_MODEL_PATH);
@@ -16,8 +29,8 @@ function RiggedH1({ robotId, selected, enabled }: { robotId:string; selected:boo
     result.traverse(node=>{if(node instanceof SkinnedMesh){node.frustumCulled=false;node.castShadow=true;node.receiveShadow=true;}});
     return result;
   },[scene]);
-  const root = useMemo(()=>model.getObjectByName('Unitree_H1')!,[model]);
-  const neutralHeight = useMemo(()=>root.position.y,[root]);
+  const root = useMemo(()=>model.getObjectByName('Unitree_H1') || model,[model]);
+  const neutralHeight = useMemo(()=>root.position?.y ?? 0,[root]);
   const hasWorld = useRef(false);
   const rig=useMemo(()=>bindH1Rig(model),[model]);
   const lastSequence=useRef(-1);
