@@ -28,7 +28,11 @@ npm run dev -- --mode production
 
 Open the address Vite prints. Select agents, orbit the twin, inspect synthetic joint loads, toggle occupancy, and pause or resume the gait. No ROS installation, GPU workstation or API account is required.
 
-All three embodiments accept waypoint sequences. In Agentic mode, the local demo parser also understands instructions such as `go to Terminal then return Home`, `move to 1, 2`, and `turn left 90 then move forward 1 m`. It resolves saved locations and simple movement phrases; it does not call an AI model or avoid collisions. STOP holds a running sequence; Resume continues it. Completed missions hold their final pose.
+All three embodiments accept waypoint sequences. In Agentic mode, the local demo parser also understands saved locations, `move to 1, 2`, and `turn left 90 then move forward 1 m`. It resolves simple movement phrases without an AI model. STOP holds a running sequence; Resume continues it. Completed missions hold their final pose.
+
+The Fleet drawer has a delete button for each bot. Deleting the selected bot focuses a remaining unit; deleting a mission owner cancels its mission. Bots can be removed and redeployed, including after the fleet is empty. Spawn locations are checked against robot bodies, obstacle boxes and scene bounds, with a message explaining invalid placement.
+
+Navigation checks the whole route before dispatch and the swept body footprint on every movement tick. If a new blocker appears, the robot holds before collision and explains what blocked it. Remove/move the blocking bot or choose different waypoints, then resume. Checks use conservative body radii plus 0.10 m clearance. They reject or stop blocked paths rather than automatically rerouting; choose waypoints around the divider for a clear route to Terminal.
 
 Voxels toggles the synthetic floor/obstacle point cloud. The decorative flowing sensor fields surround every fleet unit independently of the Perception drawer; Sensor motion in Settings pauses that animation. The Perception tool highlights only while its drawer is open.
 

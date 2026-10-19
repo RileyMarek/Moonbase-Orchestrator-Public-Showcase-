@@ -1,4 +1,5 @@
 import type { MissionSnapshot } from '../domain/types';
+import { clearanceIssue, type DemoBody } from './clearance';
 
 /** ROS world metres/radians. This is a kinematic demo, not a robot controller. */
 export interface DemoPose { x: number; y: number; yaw: number; speed: number }
@@ -39,4 +40,10 @@ export function advanceDemoMission(pose: DemoPose, mission: MissionSnapshot, dt:
     ...(done ? { result: { message: 'Completed in the local kinematic demo', pose: [next.x,next.y,next.yaw] } } : {}),
   } : step);
   return { pose: next, mission: { ...mission, steps, state: steps.every(s => s.state === 'succeeded') ? 'succeeded' : 'running' }, elapsed: done ? 0 : seconds, progress };
+}
+
+export function advanceCheckedMission(pose:DemoPose,mission:MissionSnapshot,dt:number,elapsed:number,body:DemoBody,fleet:DemoBody[],speed=.75) {
+  const next=advanceDemoMission(pose,mission,dt,elapsed,speed);
+  const blocked=mission.state==='running'?clearanceIssue(body,pose,next.pose,fleet):null;
+  return blocked ? {...next,pose:{...pose,speed:0},mission:{...mission,state:'held'},elapsed,blocked} : {...next,blocked:null};
 }

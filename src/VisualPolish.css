@@ -203,3 +203,9 @@
 .op-metric-gauge[data-exceeded="true"] .reading{stroke:var(--op-orange)}
 
 html:has(.operator-app),body:has(.operator-app),#root:has(.operator-app){min-width:0}
+
+.hud-fleet-row{display:flex;align-items:center;gap:8px}
+.hud-fleet-row .hud-fleet-unit{flex:1;min-width:0;width:auto}
+.hud-fleet-row .hud-fleet-unit span:nth-child(2){min-width:0;overflow-wrap:anywhere}
+.hud-fleet-delete{flex:none;padding:10px!important;border:1px solid #bd756b55!important;border-radius:10px!important;color:#d29187!important;background:transparent!important}
+.hud-fleet-delete:hover:not(:disabled){background:#bd756b22!important}

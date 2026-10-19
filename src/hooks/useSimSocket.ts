@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useAppStore } from '../store';
 import { sampleDemo, demoVoxelSnapshot } from '../telemetry/demoMockStream';
-import { publishJointFrame, publishPoseFrame, setJointConnection } from '../telemetry/jointStream';
-import { voxelStream, clearVoxelStreams } from '../telemetry/voxelStream';
+import { publishJointFrame, publishPoseFrame, setJointConnection, removeRobotFrames } from '../telemetry/jointStream';
+import { voxelStream, clearVoxelStreams, removeVoxelStream } from '../telemetry/voxelStream';
 import { useDemoState } from '../demo/state';
-import { advanceDemoMission, type DemoPose } from '../demo/motion';
+import { advanceCheckedMission, type DemoPose } from '../demo/motion';
 import type { MissionSnapshot } from '../domain/types';
 
 export type TelemetryStatus = 'connecting'|'waiting'|'live'|'stale'|'disconnected'|'disabled';
@@ -18,37 +18,50 @@ export function useSimSocket() {
     const poses:Record<string,DemoPose>={...useDemoState.getState().motion};
     const voxelBytes=demoVoxelSnapshot(), neutral=sampleDemo(0);
     const heldJoints:Record<string,Record<string,number>>={};
+    const generations:Record<string,number>={};
     let raf=0, last=performance.now(), lastUI=-Infinity, time=useDemoState.getState().time;
     let missionId:string|null=null, stepElapsed=0;
     // Preserve the initial H1 showcase patrol until the visitor issues a mission.
     let patrol:MissionSnapshot={id:'patrol',state:'running',steps:[
       {command:{kind:'walk',x:1.9,y:0},state:'pending'},
       {command:{kind:'walk',x:1.9,y:2.1},state:'pending'},
+      {command:{kind:'walk',x:1.9,y:0},state:'pending'},
       {command:{kind:'walk',x:0,y:0},state:'pending'},
     ]};
-    let patrolElapsed=0;
+    let patrolElapsed=0,patrolEnabled=true;
     function tick(now:number){
       const dt=Math.min(Math.max((now-last)/1000,0),.1);last=now;
       const state=useDemoState.getState(), app=useAppStore.getState();
       if(!state.paused)time+=dt;
       const robots=app.robots.filter(r=>r.mode==='simulation');
+      for(const id of Object.keys(poses))if(!robots.some(r=>r.id===id)){
+        if(id==='bot-01')patrolEnabled=false;
+        delete poses[id];delete heldJoints[id];delete generations[id];removeRobotFrames(id);removeVoxelStream(id);
+      }
       for(const robot of robots){
-        poses[robot.id] ??= {x:robot.position[2],y:robot.position[0],yaw:0,speed:0};
+        const generation=state.generations[robot.id]||0;
+        if(generations[robot.id]!==generation){
+          if(robot.id==='bot-01'&&generations[robot.id]!==undefined)patrolEnabled=false;
+          poses[robot.id]=state.motion[robot.id]||{x:robot.position[2],y:robot.position[0],yaw:0,speed:0};
+          delete heldJoints[robot.id];generations[robot.id]=generation;
+        }
         poses[robot.id]={...poses[robot.id],speed:0};
       }
+      const bodies=robots.map(r=>({id:r.id,type:r.type,x:poses[r.id].x,y:poses[r.id].y}));
       let nextMission=state.mission;
       if(nextMission?.id!==missionId){missionId=nextMission?.id || null;stepElapsed=0;}
       const owner=robots.find(r=>r.id===state.missionRobotId);
       if(!state.paused && nextMission?.state==='running' && owner){
         const previous=nextMission;
-        const result=advanceDemoMission(poses[owner.id],nextMission,dt,stepElapsed,owner.type==='amr'?.6:owner.type==='quadruped'?.7:.75);
+        const result=advanceCheckedMission(poses[owner.id],nextMission,dt,stepElapsed,bodies.find(b=>b.id===owner.id)!,bodies,owner.type==='amr'?.6:owner.type==='quadruped'?.7:.75);
         poses[owner.id]=result.pose;stepElapsed=result.elapsed;nextMission=result.mission;
-        if(previous.state!==nextMission.state || previous.steps.some((s,i)=>s.state!==nextMission!.steps[i].state))
-          useDemoState.setState({mission:nextMission});
-      }else if(!state.paused && !nextMission && poses['bot-01']){
+        if(result.blocked)useDemoState.setState({mission:nextMission,paused:true,blocked:{robotId:owner.id,message:`Navigation stopped: ${result.blocked} Move/delete the blocker or choose another waypoint.`}});
+        else if(previous.state!==nextMission.state || previous.steps.some((s,i)=>s.state!==nextMission!.steps[i].state))useDemoState.setState({mission:nextMission});
+      }else if(patrolEnabled&&!state.paused && !nextMission && robots.some(r=>r.id==='bot-01')){
         if(patrol.state==='succeeded')patrol={...patrol,state:'running',steps:patrol.steps.map(s=>({...s,state:'pending'}))};
-        const result=advanceDemoMission(poses['bot-01'],patrol,dt,patrolElapsed,.75);
+        const result=advanceCheckedMission(poses['bot-01'],patrol,dt,patrolElapsed,bodies.find(b=>b.id==='bot-01')!,bodies,.75);
         poses['bot-01']=result.pose;patrol=result.mission;patrolElapsed=result.elapsed;
+        if(result.blocked)useDemoState.setState({paused:true,blocked:{robotId:'bot-01',message:`Patrol stopped: ${result.blocked} Choose a clear waypoint to continue.`}});
       }
       const frame=sampleDemo(time), flush=now-lastUI>=100;
       for(const robot of robots){
