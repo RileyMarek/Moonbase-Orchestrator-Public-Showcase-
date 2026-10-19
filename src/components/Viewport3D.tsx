@@ -1,3 +1,4 @@
+import { RobotSensorField } from './RobotSensorField';
 import { RobotGrounding } from "./RobotGrounding";
 
 import { SpatialFloor } from "./SpatialFloor";
@@ -454,7 +455,7 @@ export const Viewport3D: React.FC<{course?: Course | null;presentation?:'astro'|
 
         {activeRobots.map((robot) => (
 
-          <React.Fragment key={robot.id}>{presentation==='operator'&&<RobotGrounding robotId={robot.id}/>}<RobotModel robot={robot} selectable={selectionEnabled} onFocus={onRobotFocus}/></React.Fragment>
+          <React.Fragment key={robot.id}>{presentation==='operator'&&<><RobotGrounding robotId={robot.id}/>{appMode==='simulation'&&<RobotSensorField robotId={robot.id} stopped={['held','stopped','canceled'].includes(spatial?.motion.state || '')} speed={spatial?.robotId===robot.id?spatial.speed_m_s || 0:0}/>}</>}<RobotModel robot={robot} selectable={selectionEnabled} onFocus={onRobotFocus}/></React.Fragment>
 
         ))}
 

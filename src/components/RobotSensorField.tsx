@@ -18,7 +18,7 @@ void main(){
   float width=max(fwidth(phase),.055);
   float wave=1.-smoothstep(.035,.035+width,abs(sin(phase)));
   float detail=.55+.45*sin(angle*72.+r*4.);
-  gl_FragColor=vec4(.29,.77,.78,envelope*wave*detail*.16);
+  gl_FragColor=vec4(.29,.77,.78,envelope*wave*detail*.3);
 }`;
 
 // A decorative depth-activity field, not synthetic lidar measurements.
@@ -38,7 +38,7 @@ export function RobotSensorField({ robotId, speed=0, stopped=false }: { robotId:
     if (useAppStore.getState().sceneMotion && !reducedMotion.matches && !stopped) phase.current += Math.min(delta,.1) * (.45 + Math.min(Math.max(speed,0),.5)*3);
     if (material.current) material.current.uniforms.time.value = phase.current;
   });
-  return <group ref={group} visible={false}><mesh rotation={[-Math.PI / 2, 0, 0]} raycast={() => {}}>
+  return <group ref={group} visible={false} name={`sensor-field-${robotId}`}><mesh rotation={[-Math.PI / 2, 0, 0]} raycast={() => {}}>
     <planeGeometry args={[SENSOR_FIELD_RADIUS_M * 2, SENSOR_FIELD_RADIUS_M * 2]}/>
     <shaderMaterial ref={material} uniforms={uniforms} vertexShader={vertexShader} fragmentShader={fragmentShader} transparent depthWrite={false} toneMapped={false}/>
   </mesh></group>;

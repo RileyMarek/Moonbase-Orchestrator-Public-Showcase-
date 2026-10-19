@@ -1,5 +1,5 @@
 import { CameraFrustum } from "./CameraFrustum";
-import { useMemo, useRef } from 'react';
+import { useLayoutEffect, useMemo, useRef } from 'react';
 
 import { useFrame } from '@react-three/fiber';
 
@@ -15,7 +15,7 @@ import { worldPoseToThree } from '../telemetry/worldPose';
 
 import { LOCAL_VOXEL_LIMIT, localVoxels, sensorFresh } from '../domain/spatialPresentation';
 
-import { RobotSensorField } from './RobotSensorField';
+
 
 import type { WaypointProof } from '../domain/waypointProof';
 
@@ -74,7 +74,7 @@ export function SpatialOverlay({ robotId, points, proof, camera, status, speed=0
 
       const floor = z * r < .15;
 
-      scale.set(r * .20, r * .20, r * .20); matrix.scale(scale);
+      scale.set(r * .45, r * .45, r * .45); matrix.scale(scale);
 
       mesh.current.setMatrixAt(i, matrix);
 
@@ -90,6 +90,8 @@ export function SpatialOverlay({ robotId, points, proof, camera, status, speed=0
 
   });
 
+  useLayoutEffect(() => { if(mesh.current) mesh.current.count=0; }, []);
+
   const trace = proof?.trace.map(row => [row.pose[1], .027, row.pose[0]] as [number, number, number]) || [];
 
   const goal = proof?.target ? [proof.target[1], .026, proof.target[0]] as [number, number, number] : null;
@@ -98,9 +100,9 @@ export function SpatialOverlay({ robotId, points, proof, camera, status, speed=0
 
   const validated = proof?.steps[3]?.state === 'passed';
 
-  return <>{showPerception && <><RobotSensorField robotId={robotId} speed={speed} stopped={["canceled","stopped","failed"].includes(status || "")}/>{camera && <CameraFrustum camera={camera}/>}</>}
+  return <>{showPerception && <>{camera && <CameraFrustum camera={camera}/>}</>}
 
-    <instancedMesh visible={showVoxels} ref={mesh} args={[undefined, undefined, LOCAL_VOXEL_LIMIT]} count={0}><sphereGeometry args={[.5, 6, 4]}/><meshBasicMaterial transparent opacity={.32} depthWrite={false}/></instancedMesh>
+    <instancedMesh visible={showVoxels} ref={mesh} args={[undefined, undefined, LOCAL_VOXEL_LIMIT]} frustumCulled={false} name={`voxel-overlay-${robotId}`}><boxGeometry args={[.7, .7, .7]}/><meshBasicMaterial transparent opacity={.6} depthWrite={false}/></instancedMesh>
 
     <Trajectory points={points}/>
 
