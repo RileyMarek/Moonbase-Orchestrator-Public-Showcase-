@@ -1,12 +1,13 @@
 import type { MissionStep } from '../domain/types';
 import type { BookmarkList } from '../hooks/usePoseBookmarks';
 import type { DemoPose } from './motion';
+import { DEMO_BOUNDS } from './environment';
 
-export function validateDemoSteps(steps: MissionStep[]) {
-  if (!Array.isArray(steps) || steps.length === 0 || steps.length > 32) throw new Error('Use 1–32 demo steps');
+export function validateDemoSteps(steps: MissionStep[],maxSteps=32) {
+  if (!Array.isArray(steps) || steps.length === 0 || steps.length > maxSteps) throw new Error(`Use 1–${maxSteps} demo steps`);
   for (const step of steps) {
     if (!['walk','turn','observe','inspect','wait'].includes(step.kind)) throw new Error('Unsupported demo step');
-    if (step.kind === 'walk' && (![step.x,step.y].every(Number.isFinite) || Math.abs(step.x!) > 7 || Math.abs(step.y!) > 7)) throw new Error('Demo waypoints must be finite and inside ±7 m');
+    if (step.kind === 'walk' && (![step.x,step.y].every(Number.isFinite) || step.x!<DEMO_BOUNDS[0]||step.y!<DEMO_BOUNDS[1]||step.x!>DEMO_BOUNDS[2]||step.y!>DEMO_BOUNDS[3])) throw new Error('Demo waypoints must be finite and inside the scene boundary');
     if (step.kind === 'turn' && !Number.isFinite(step.yaw)) throw new Error('Use a finite heading');
     if (step.kind === 'wait' && (!Number.isFinite(step.seconds) || step.seconds! < 0 || step.seconds! > 60)) throw new Error('Wait for 0–60 seconds');
   }

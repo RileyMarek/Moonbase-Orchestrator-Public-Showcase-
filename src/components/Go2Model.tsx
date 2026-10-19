@@ -24,7 +24,7 @@ export function Go2Model({ robotId, color }: { robotId: string; color: string })
   const sequence = useRef(-1);
   useFrame(() => {
     if (!root.current) return;
-    // Odom is the base-link height. Registry-only previews use a neutral standing height.
+    // Browser poses are ground anchors; preserve the procedural standing offset.
     root.current.position.y = .32;
     const frame = getJointFrame(robotId);
     if (frame && performance.now() - frame.receivedAt < 2000 && frame.sequence !== sequence.current) {
@@ -48,9 +48,9 @@ export function Go2Model({ robotId, color }: { robotId: string; color: string })
     {GO2_LEGS.map(leg => {
       const side = leg.endsWith('L') ? 1 : -1;
       const front = leg.startsWith('F');
-      return <group key={leg} position={[side * .0465, 0, front ? .1934 : -.1934]} ref={bind(`${leg}_hip_joint`)} rotation={[0, 0, side * .1]}>
+      return <group key={leg} position={[side * .0465, 0, front ? .1934 : -.1934]} ref={bind(`${leg}_hip_joint`)}>
         <mesh position={[side * .043, 0, 0]}><boxGeometry args={[.086, .033, .036]}/><meshStandardMaterial color={graphite} roughness={.5} metalness={.4}/></mesh>
-        <group position={[side * .0955, 0, 0]} ref={bind(`${leg}_thigh_joint`)} rotation={[front ? .8 : 1, 0, 0]}>
+        <group position={[side * .0955, 0, 0]} ref={bind(`${leg}_thigh_joint`)} rotation={[.8, 0, 0]}>
           <Motor side={side}/>
           <RoundedBox args={[.025, .213, .035]} position={[0, -.1065, 0]} radius={.011} smoothness={3} castShadow><meshStandardMaterial color={shell} roughness={.4} metalness={.4}/></RoundedBox>
           <group position={[0, -.213, 0]} ref={bind(`${leg}_calf_joint`)} rotation={[-1.5, 0, 0]}>

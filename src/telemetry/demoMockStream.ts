@@ -1,4 +1,5 @@
 import { H1_JOINT_NAMES } from './h1Rig';
+import { DEMO_BOUNDS } from '../demo/environment';
 
 export const WALK_HZ = 1.2;
 export const SPEED = 0.75;
@@ -39,7 +40,7 @@ export function demoVoxelSnapshot() {
   const resolution = 0.1;
   // A sparse synthetic floor makes occupancy visible around every embodiment,
   // including units outside the two obstacle surfaces. Quantized on the same grid.
-  for (let x=-60; x<=60; x+=3) for (let y=-60; y<=60; y+=3)
+  for (let x=DEMO_BOUNDS[0]*10; x<=DEMO_BOUNDS[2]*10; x+=3) for (let y=DEMO_BOUNDS[1]*10; y<=DEMO_BOUNDS[3]*10; y+=3)
     cells.set(`${x},${y},0`,[x,y,0]);
   for (const box of OBSTACLES) {
     const bounds = box.center.map((c, i) => [

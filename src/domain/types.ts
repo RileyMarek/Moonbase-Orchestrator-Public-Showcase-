@@ -5,6 +5,7 @@ export interface MissionStep {
     target_object?: string;
     seconds?: number;
     global_route?: boolean;
+    demo_detour?: boolean;
     expected_pose?:number[];
   x?: number;
   y?: number;

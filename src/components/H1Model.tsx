@@ -62,7 +62,7 @@ function RiggedH1({ robotId, selected, enabled }: { robotId:string; selected:boo
     }
   }, -2);
   return <>
-    <primitive object={model} scale={[0.92, 0.92, 0.92]} dispose={null}/>
+    <primitive object={model} dispose={null}/>
     {selected&&<Html position={[0,diagnostic.worldPlaced?1.05:2.08,0]} center zIndexRange={[5,0]}>
       <div className="h1-pose-status" data-testid="h1-pose-status" data-world-state={diagnostic.world} data-world-xyz={diagnostic.xyz} data-state={diagnostic.state} data-matched={diagnostic.matched} data-stamp={diagnostic.stamp} data-left-elbow-rad={diagnostic.elbow}>
         <strong>UNITREE H1 / {diagnostic.state.toUpperCase()}</strong>

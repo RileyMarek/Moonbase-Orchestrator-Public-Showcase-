@@ -32,7 +32,7 @@ test('body size, clearance, self exclusion, finite coordinates, and scene bounds
   assert.equal(clearanceIssue(a,a,a,[a,{...b,type:'humanoid'}]),null);
   assert.equal(clearanceIssue(a,a,a,[a]),null);
   assert.match(clearanceIssue(a,a,{x:NaN,y:0},[])!,/finite/);
-  assert.match(clearanceIssue(a,a,{x:4.5,y:0},[])!,/boundary/);
+  assert.match(clearanceIssue(a,a,{x:12,y:0},[])!,/boundary/);
   assert.equal(BODY_RADIUS.amr>BODY_RADIUS.humanoid,true);assert.ok(CLEARANCE>0);
 });
 test('clear endpoints do not permit a route through an obstacle',()=>{
@@ -69,11 +69,13 @@ test('prototype-key IDs cannot corrupt the motion and generation maps',async()=>
   await assert.rejects(demoAction('/fleet/spawn',{robot_id:'constructor',embodiment_type:'quadruped',initial_pose:{x:0,y:0,yaw:0}}),/unique demo ID/);
   assert.equal(useAppStore.getState().robots.length,2);
 });
-test('dispatch checks the whole route and does not create a blocked mission',async()=>{
-  await assert.rejects(demoAction('/mission',{steps:[{kind:'walk',x:3.6,y:-2}]}),/bravo/);
+test('dispatch detours around blockers but rejects an occupied destination',async()=>{
+  await assert.rejects(demoAction('/mission',{steps:[{kind:'walk',x:2,y:-2}]}),/bravo/);
   assert.equal(useDemoState.getState().mission,undefined);
-  await demoAction('/mission',{steps:[{kind:'walk',x:0,y:-2}]});
+  await demoAction('/mission',{steps:[{kind:'walk',x:3.6,y:-2}]});
   assert.equal(useDemoState.getState().mission?.state,'running');
+  const commands=useDemoState.getState().mission!.steps.map(s=>s.command);
+  assert.ok(commands.length>1);assert.equal(routeIssue(alpha,commands,[alpha,bravo]),null);
 });
 test('deleting a mission owner cancels it, selects a remaining bot, and clears telemetry',async()=>{
   await demoAction('/mission',{steps:[{kind:'walk',x:0,y:-2}]});
@@ -86,11 +88,12 @@ test('deleting a mission owner cancels it, selects a remaining bot, and clears t
   assert.equal(getPoseFrame('alpha'),undefined);assert.equal(voxelStream('alpha').synchronized,false);
   assert.equal(useDemoState.getState().motion.alpha,undefined);
 });
-test('delete another robot preserves a held mission and resume rechecks clearance',async()=>{
+test('resume reroutes around a bot and deletion preserves the held mission',async()=>{
   const mission:MissionSnapshot={id:'held',state:'held',steps:[{command:{kind:'walk',x:3.6,y:-2},state:'running'}]};
   useDemoState.setState({mission,missionRobotId:'alpha',paused:true,blocked:{robotId:'alpha',message:'bravo blocks route'}});
-  await assert.rejects(demoAction('/mission/resume'),/bravo/);
-  assert.equal(useDemoState.getState().paused,true);
+  await demoAction('/mission/resume');
+  assert.equal(routeIssue(alpha,useDemoState.getState().mission!.steps.map(s=>s.command),[alpha,bravo]),null);
+  await demoAction('/mission/pause');
   await demoAction('/fleet/delete',{robot_id:'bravo'});
   assert.equal(useDemoState.getState().mission?.state,'held');
   await demoAction('/mission/resume');

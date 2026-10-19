@@ -7,6 +7,7 @@ import { clearanceIssue, routeIssue, DEMO_BOUNDS } from './clearance';
 import { currentDemoBodies } from './fleet';
 import { removeRobotFrames, getPoseFrame } from '../telemetry/jointStream';
 import { removeVoxelStream } from '../telemetry/voxelStream';
+import { routeDemoSteps, rerouteDemoMission } from './routing';
 
 /** Local UI simulator only. No transport, controller, inference, or robot dispatch. */
 export async function demoAction(path: string, input: object = {}): Promise<unknown> {
@@ -23,16 +24,17 @@ export async function demoAction(path: string, input: object = {}): Promise<unkn
   if (path === '/mission/resume') {
     const fleet=currentDemoBodies(),owner=fleet.find(r=>r.id===state.missionRobotId);
     if(!state.mission||!owner)throw new Error('No remaining robot mission to resume');
-    const issue=routeIssue(owner,state.mission.steps.filter(s=>s.state!=='succeeded').map(s=>s.command),fleet);
-    if(issue)throw new Error(issue);
-    useDemoState.setState({ paused: false, blocked:null, mission: { ...state.mission, state: 'running' } });
+    const mission=rerouteDemoMission(owner,state.mission,fleet);
+    useDemoState.setState({ paused: false, blocked:null, mission });
     return { demo: true };
   }
   if (path === '/mission/plan') {
     const robot = useAppStore.getState().robots.find(r => r.id === useAppStore.getState().selectedRobotId);
+    const fleet=currentDemoBodies(),owner=fleet.find(r=>r.id===robot?.id);
+    if(!owner)throw new Error('Select a robot before planning a mission');
     const pose = state.motion[robot?.id || ''] || { x: robot?.position[2] || 0, y: robot?.position[0] || 0, yaw: 0, speed: 0 };
     const plan = { id: crypto.randomUUID(), objective: String(body.task || 'Demo route'),
-      steps: planDemoTask(String(body.task || ''), state.bookmarks, pose), verification: 'Local demo command parser with body-clearance checks. Blocked routes require different waypoints; no VLM inference or automatic rerouting.' };
+      steps: routeDemoSteps(owner,planDemoTask(String(body.task || ''), state.bookmarks, pose),fleet), verification: 'Local command parser and A* pathfinding around walls and fleet footprints. Routes are rechecked at dispatch and during movement. No VLM inference.' };
     useDemoState.setState({ plan }); return plan;
   }
   if (path === '/mission' || path === '/mission/execute-plan') {
@@ -40,15 +42,16 @@ export async function demoAction(path: string, input: object = {}): Promise<unkn
     if (path === '/mission/execute-plan' && body.plan_id !== state.plan?.id) throw new Error('Draft the instruction again before running it');
     const steps = path === '/mission' ? body.steps as MissionStep[] : state.plan?.steps;
     if (!steps?.length) throw new Error('Add a demo sequence first');
-    const validated = validateDemoSteps(steps);
+    const validated = validateDemoSteps(steps,path==='/mission/execute-plan'?256:32);
     const fleet=currentDemoBodies(),owner=fleet.find(r=>r.id===useAppStore.getState().selectedRobotId);
     if(!owner)throw new Error('Select a robot before starting a mission');
-    const issue=routeIssue(owner,validated,fleet);
+    const routed=routeDemoSteps(owner,validated,fleet);
+    const issue=routeIssue(owner,routed,fleet);
     if(issue)throw new Error(issue);
     useDemoState.setState({ paused: false, blocked:null, missionStarted: state.time,
       missionRobotId: owner.id,
       mission: { id: String(body.id || crypto.randomUUID()), objective: state.plan?.objective,
-        state: 'running', steps: validated.map(command => ({ command, state: 'pending' })) } });
+        state: 'running', steps: routed.map(command => ({ command, state: 'pending' })) } });
     return { demo: true };
   }
   if (path === '/course') { useDemoState.setState({ courseLoaded: body.loaded === true }); return { demo: true }; }

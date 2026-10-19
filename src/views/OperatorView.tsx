@@ -1,4 +1,5 @@
 import { currentDemoBodies } from '../demo/fleet';
+import { DEMO_BOUNDS } from '../demo/environment';
 import { clearanceIssue } from '../demo/clearance';
 import { pendingWaypoints } from '../domain/waypointDraft';
 import { FleetList } from '../components/operator/FleetList';
@@ -174,7 +175,7 @@ export function OperatorView() {
 
     </button>
 
-    <div className="hud-scene-note">{pinning?'Click the floor to place a location · Esc to cancel':placing?'Click the floor to add waypoints · Esc to finish':snapshot?.fleet?.environment?.id || 'Waiting for scene'}<span>{snapshot?.fleet?.environment?'Isaac ground truth':'Drafting never sends motion'}</span></div>
+    <div className="hud-scene-note">{pinning?'Click the floor to place a location · Esc to cancel':placing?'Click the floor to add waypoints · Esc to finish':snapshot?.fleet?.environment ? `${snapshot.fleet.environment.id} · ${DEMO_BOUNDS[2]-DEMO_BOUNDS[0]} × ${DEMO_BOUNDS[3]-DEMO_BOUNDS[1]} m` : 'Waiting for scene'}<span>{snapshot?.fleet?.environment?'Isaac ground truth':'Drafting never sends motion'}</span></div>
 
     <section className="hud-mission" aria-label="Mission control">
 
@@ -216,4 +217,3 @@ export function OperatorView() {
   </div>;
 
 }
-

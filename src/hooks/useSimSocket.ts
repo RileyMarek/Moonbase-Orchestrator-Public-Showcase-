@@ -57,7 +57,7 @@ export function useSimSocket() {
         const result=advanceCheckedMission(poses[owner.id],nextMission,dt,stepElapsed,bodies.find(b=>b.id===owner.id)!,bodies,owner.type==='amr'?.6:owner.type==='quadruped'?.7:.75);
         poses[owner.id]=result.pose;stepElapsed=result.elapsed;nextMission=result.mission;
         if(result.blocked)useDemoState.setState({mission:nextMission,paused:true,blocked:{robotId:owner.id,message:`Navigation stopped: ${result.blocked} Move/delete the blocker or choose another waypoint.`}});
-        else if(previous.state!==nextMission.state || previous.steps.some((s,i)=>s.state!==nextMission!.steps[i].state))useDemoState.setState({mission:nextMission});
+        else if(result.rerouted||previous.state!==nextMission.state || previous.steps.some((s,i)=>s.state!==nextMission!.steps[i]?.state))useDemoState.setState({mission:nextMission});
       }else if(patrolEnabled&&!state.paused && !nextMission && robots.some(r=>r.id==='bot-01')){
         if(patrol.state==='succeeded')patrol={...patrol,state:'running',steps:patrol.steps.map(s=>({...s,state:'pending'}))};
         const result=advanceCheckedMission(poses['bot-01'],patrol,dt,patrolElapsed,bodies.find(b=>b.id==='bot-01')!,bodies,.75);

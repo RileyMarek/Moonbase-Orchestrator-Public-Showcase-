@@ -7,6 +7,7 @@ import { aboveFloor, FLOOR_Y, VisualBounds } from '../src/demo/grounding';
 import { bindH1Rig, applyH1Pose } from '../src/telemetry/h1Rig';
 import { sampleDemo } from '../src/telemetry/demoMockStream';
 import { BODY_RADIUS } from '../src/demo/clearance';
+import { localModelBounds, metricScale } from '../src/domain/modelScale';
 import { pickedFloorPoint } from '../src/domain/floorPicking';
 import { appendDraftWaypoint, pendingWaypoints } from '../src/domain/waypointDraft';
 import { demoAction } from '../src/demo/actions';
@@ -25,7 +26,13 @@ test('the real H1 keeps its standing anchor and stays above floor through the co
   const gltf=await new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');
   const model=gltf.scene,anchor=model.getObjectByName('Unitree_H1')!;
   assert.ok(anchor.position.y>1,'H1 needs its built-in 1.04 m standing offset');
-  model.scale.setScalar(.92);const actor=new Group(),visual=new Group();actor.position.y=FLOOR_Y;actor.add(visual);visual.add(model);
+  const reference=localModelBounds(model).getSize(new Vector3());
+  model.scale.set(...metricScale('humanoid',reference));
+  model.updateWorldMatrix(true,true);
+  model.updateMatrixWorld(true);
+  const calibrated=new Box3().setFromObject(model,true).getSize(new Vector3());
+  assert.ok(Math.abs(calibrated.y-1.805)<1e-6,`H1 reference ${reference.y}; calibrated ${calibrated.y}`);
+  const actor=new Group(),visual=new Group();actor.position.y=FLOOR_Y;actor.add(visual);visual.add(model);
   const rig=bindH1Rig(model),support=new VisualBounds();let radius=0;
   for(let i=0;i<24;i++){
     applyH1Pose(rig,sampleDemo(i/24/1.2).joints);visual.position.y=0;

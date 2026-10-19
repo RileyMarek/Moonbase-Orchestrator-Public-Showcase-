@@ -1,4 +1,5 @@
 import { FloorPicker } from './FloorPicker';
+import { DEMO_BOUNDS } from '../demo/environment';
 import { RobotSensorField } from './RobotSensorField';
 import { RobotGrounding } from "./RobotGrounding";
 
@@ -276,15 +277,15 @@ const CameraController = ({overview=false,overviewPanel=false}:{overview?:boolea
 
  * Name: OperationBoundary
 
- * Description: Visualizes the 50x50 operation space.
+ * Description: Visualizes the shared metric operation space.
 
  */
 
 const OperationBoundary = () => (
 
-  <mesh position={[0, 12.5, 0]}>
+  <mesh position={[(DEMO_BOUNDS[1]+DEMO_BOUNDS[3])/2, 2, (DEMO_BOUNDS[0]+DEMO_BOUNDS[2])/2]}>
 
-    <boxGeometry args={[50, 25, 50]} />
+    <boxGeometry args={[DEMO_BOUNDS[3]-DEMO_BOUNDS[1], 4, DEMO_BOUNDS[2]-DEMO_BOUNDS[0]]} />
 
     <meshBasicMaterial color="#06b6d4" wireframe transparent opacity={0.15} side={DoubleSide} />
 
@@ -371,7 +372,7 @@ export const Viewport3D: React.FC<{course?: Course | null;presentation?:'astro'|
 
         {presentation==='operator'&&<><color attach="background" args={[colorMode==='light'?'#dce3e8':'#111318']}/><fog attach="fog" args={[colorMode==='light'?'#dce3e8':'#111318',planView?80:8,planView?150:28]}/></>}
 
-        {onDraft&&<FloorPicker enabled={drafting} owner={selectedRobotId||''} bounds={spatial?.fleet?.environment?.bounds||[-2.5,-3.5,4.5,3.5]} onPick={onDraft} onError={onDraftError}/>}
+        {onDraft&&<FloorPicker enabled={drafting} owner={selectedRobotId||''} bounds={spatial?.fleet?.environment?.bounds||DEMO_BOUNDS} onPick={onDraft} onError={onDraftError}/>}
 
         {planView?<OrthographicCamera makeDefault position={[0,30,0]} up={[0,0,-1]} zoom={80} near={0.01} far={150}/>:<PerspectiveCamera makeDefault position={[2.8,2.3,3.6]} fov={45}/>}
 

@@ -1,4 +1,5 @@
 import { aboveFloor, FLOOR_Y, VisualBounds } from '../demo/grounding';
+import { MetricModel } from './MetricModel';
 /**
 
  * Author: Riley Marek
@@ -303,6 +304,8 @@ export const RobotModel: React.FC<{ robot: Robot; onFocus?:()=>void;selectable?:
     if(Number.isFinite(bounds.min.y)){
       const lift=Math.max(0,FLOOR_Y-bounds.min.y);visualRef.current.position.y+=lift;
       if(labelRef.current)labelRef.current.dataset.groundMinY=String(bounds.min.y+lift);
+      const dimensions=visualRef.current.getObjectByName('metric-model')?.userData.metricDimensions;
+      if(labelRef.current&&dimensions)labelRef.current.dataset.modelDimensions=JSON.stringify(dimensions);
     }
   },-1);
 
@@ -342,11 +345,13 @@ export const RobotModel: React.FC<{ robot: Robot; onFocus?:()=>void;selectable?:
       </mesh>
 
       <group ref={visualRef} name={`robot-visual-${robot.id}`}>
+      <MetricModel type={robot.type}>
       {robot.type === 'humanoid' && <H1Model robotId={robot.id} selected={isSelected} enabled={robot.mode === 'simulation'} />}
 
       {robot.type === 'quadruped' && <Go2Model robotId={robot.id} color={isSelected ? '#4b9e78' : '#a7b8ae'} />}
 
       {robot.type === 'amr' && <AMRModel color={finalColor} variant={robot.amrVariant} />}
+      </MetricModel>
       </group>
 
       
