@@ -1,3 +1,4 @@
+import { BODY_RADIUS, DEMO_BOUNDS } from '../demo/clearance';
 import { useEffect, useState } from 'react';
 import type { Course, MissionSnapshot } from '../domain/types';
 import { useAppStore } from '../store';
@@ -58,9 +59,13 @@ export function useRobotControl(enabled: boolean) {
 
     const timer = setInterval(() => {
       const now = performance.now();
-      const currentRobot = selectedId || 'bot-01';
+      const robots=useAppStore.getState().robots.filter(r=>r.mode==='simulation');
+      const selected=robots.find(r=>r.id===selectedId)||robots[0];
+      const currentRobot=selected?.id || '';
+      const available=!!selected;
       const demoState = useDemoState.getState();
       const isPaused = demoState.paused;
+      const blocked=demoState.blocked;
       const robotMotion = demoState.motion[currentRobot];
       const speed = isPaused ? 0 : robotMotion?.speed || 0;
       const stream = voxelStream(currentRobot);
@@ -73,15 +78,15 @@ export function useRobotControl(enabled: boolean) {
       const remaining = command?.kind==='walk' ? Math.hypot(command.x!-pose[0],command.y!-pose[1]) : 0;
       const nextSnapshot: ControlSnapshot = {
         robotId: currentRobot,
-        ready: true,
+        ready: available,
         busy: false,
-        runtimeFresh: true,
+        runtimeFresh: available,
         speed_m_s: speed,
         course: demoCourse,
         pose,
         runtime: {
           policy_state: isPaused ? 'STOPPED' : 'ACTIVE',
-          embodiment_type: currentRobot === 'carter-01' ? 'amr' : currentRobot === 'go2-01' ? 'quadruped' : 'humanoid',
+          embodiment_type: selected?.type==='amr'?'wheeled_amr':selected?.type,
           upright: true,
           policy: 'Unified_PPO_Locomotion',
           control_mode: 'simulation',
@@ -123,9 +128,10 @@ export function useRobotControl(enabled: boolean) {
         preview: demoState.preview,
         mission,
         navigation: {
-          state: isPaused ? 'held' : 'tracking',
+          state: blocked?'blocked':isPaused?'held':speed>.005?'tracking':'idle',
+          reason: blocked?`${blocked.robotId}: ${blocked.message}`:'Body-clearance checks enabled',
           controller: 'Unified_PPO_Locomotion',
-          footprint_radius_m: currentRobot === 'carter-01' ? 0.45 : currentRobot === 'go2-01' ? 0.35 : 0.40,
+          footprint_radius_m: selected?BODY_RADIUS[selected.type]:0,
           revocations: 0,
           hz: 20.0,
         },
@@ -155,11 +161,7 @@ export function useRobotControl(enabled: boolean) {
         fleet: {
           epoch: 'public-demo-epoch',
           fresh: true,
-          robots: [
-            { robot_id: 'bot-01', embodiment_type: 'humanoid', namespace: '/bot_01', initial_pose: [0, 0, 0], navigation_ready: true },
-            { robot_id: 'carter-01', embodiment_type: 'wheeled_amr', namespace: '/carter_01', initial_pose: [-1.6, -2, 0], navigation_ready: true },
-            { robot_id: 'go2-01', embodiment_type: 'quadruped', namespace: '/go2_01', initial_pose: [1.2, -2, 0], navigation_ready: true },
-          ],
+          robots: robots.map(r=>({robot_id:r.id,embodiment_type:r.type==='amr'?'wheeled_amr':r.type,namespace:'demo',initial_pose:[r.position[2],r.position[0],0],navigation_ready:true})),
           catalog: {
             humanoid: { label: 'Unitree H1', asset: 'h1.glb', controller: 'Unified_PPO_Locomotion' },
             wheeled_amr: { label: 'Nova Carter', asset: null, controller: 'DiffDrive' },
@@ -172,16 +174,13 @@ export function useRobotControl(enabled: boolean) {
             epoch: 'public-demo-epoch',
             revision: 'demo-rev-1',
             frame: 'world',
-            bounds: [-2.5, -3.5, 4.5, 3.5],
+            bounds: [...DEMO_BOUNDS],
             localization: 'Isaac Sim Ground Truth',
             obstacles: [
               { id: 'divider', center: [0.5, 1.3, 0.5], size: [1.2, 0.5, 1] },
               { id: 'outer', center: [3, 0.9, 0.5], size: [0.4, 1.4, 1] },
             ],
-            landmarks: {
-              Home: { pose: [0, 0, 0], evidence: 'Base origin' },
-              Terminal: { pose: [2.1, 1.9, 0], evidence: 'Corridor inspection point' },
-            },
+            landmarks: Object.fromEntries(Object.entries(demoState.bookmarks.items).map(([name,location])=>[name,{pose:location.pose,evidence:'Saved demo location'}])),
           },
         },
         globalNavigation: {

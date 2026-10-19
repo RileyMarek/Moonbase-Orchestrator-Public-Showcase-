@@ -1,3 +1,8 @@
+import { currentDemoBodies } from '../demo/fleet';
+import { DEMO_BOUNDS } from '../demo/environment';
+import { clearanceIssue } from '../demo/clearance';
+import { pendingWaypoints } from '../domain/waypointDraft';
+import { FleetList } from '../components/operator/FleetList';
 import { useEffect, useState } from 'react';
 
 import { Activity, Box, Camera, ChevronRight, Crosshair, Network, Radio, Search, Settings, X } from 'lucide-react';
@@ -52,6 +57,7 @@ export function OperatorView() {
   const [overview,setOverview]=useState(false);
 
   const [placing, setPlacing] = useState(false);
+  const [pickError,setPickError]=useState('');
   const [pinning,setPinning]=useState(false);
   const [pin,setPin]=useState<number[]|null>(null);
   const bookmarks=usePoseBookmarks(snapshot?.robotId || '',snapshot?.fleet?.environment?.revision);
@@ -66,7 +72,10 @@ export function OperatorView() {
 
   const sim = state.appMode === 'simulation';
 
-  const open = (next: Drawer) => {if(next==='fleet'){setOverview(true);state.setViewMode('perspective');}setDrawer(current => current === next ? null : next);};
+  const open = (next: Drawer) => {setPlacing(false);setPinning(false);setPickError('');if(next==='fleet'){setOverview(true);state.setViewMode('perspective');}setDrawer(current => current === next ? null : next);};
+
+  useEffect(()=>{setPlacing(false);setPinning(false);setPin(null);setPickError('');},[state.selectedRobotId,state.appMode]);
+  useEffect(()=>{if(m.locked){setPlacing(false);setPinning(false);}},[m.locked]);
 
   useEffect(() => {
 
@@ -89,6 +98,7 @@ export function OperatorView() {
   const model = robot?.type === 'amr' ? 'Nova Carter' : robot?.type === 'quadruped' ? 'Unitree Go2' : 'Unitree H1';
 
   const rows = m.running ? m.mission?.steps.map(s => s.command) || [] : m.steps;
+  const waypointSteps=pendingWaypoints(m.steps,m.mission,m.running);
 
   const readings=snapshot?.displayTelemetry;
 
@@ -105,10 +115,20 @@ export function OperatorView() {
 
       <Viewport3D presentation="operator" spatial={sim ? snapshot : null} course={sim ? snapshot?.course : null}
 
-        selectionEnabled={!m.locked} overviewPanel={drawer==='fleet'} onRobotFocus={()=>{setOverview(false);setDrawer(null);}} overview={overview} showPerception={drawer==='perception'} showVoxels={voxels} steps={rows}
+        selectionEnabled={!m.locked&&!placing&&!pinning} overviewPanel={drawer==='fleet'} onRobotFocus={()=>{setOverview(false);setDrawer(null);}} overview={overview} showPerception={drawer==='perception'} showVoxels={voxels} steps={waypointSteps} pendingLocation={pin} onDraftError={setPickError}
 
         locations={Object.values(bookmarks.data.items).filter(b=>b.available).map(b=>({name:b.label,pose:b.pose}))}
-        drafting={(placing || pinning) && !m.locked} onDraft={(x,y) => {if(pinning){setPin([Number(x.toFixed(2)),Number(y.toFixed(2))]);setPinning(false);setDrawer('bookmarks');}else m.edit([...m.steps,{kind:'walk',x:Number(x.toFixed(2)),y:Number(y.toFixed(2)),tolerance:.1,timeout_sec:180,global_route:true}]);}}/>
+        drafting={(placing || pinning) && !m.locked} onDraft={(x,y) => {
+          setPickError('');
+          if(pinning){setPin([Number(x.toFixed(2)),Number(y.toFixed(2))]);setPinning(false);setDrawer('bookmarks');}
+          else {
+            const fleet=currentDemoBodies(),owner=fleet.find(r=>r.id===state.selectedRobotId);
+            if(!owner){setPickError('Select a bot before adding waypoints.');return;}
+            const point={x,y},issue=clearanceIssue(owner,point,point,fleet);
+            if(issue){setPickError(`Choose a clear waypoint: ${issue}`);return;}
+            m.appendWaypoint(x,y);
+          }
+        }}/>
 
     </main>
 
@@ -134,7 +154,7 @@ export function OperatorView() {
 
       <div className="hud-camera-tool"><Camera size={20}/><span>Camera</span><div className="hud-switch" aria-label="Camera projection"><button aria-pressed={state.viewMode==='perspective'} onClick={()=>{setOverview(false);state.setViewMode('perspective');}}>3D</button><button aria-pressed={state.viewMode==='plan'} onClick={()=>{setOverview(false);state.setViewMode('plan');}}>2D</button></div></div>
 
-      <button aria-pressed={placing} disabled={m.locked || !sim} onClick={()=>{setOverview(false);setPinning(false);setPlacing(!placing);m.setMode('manual')}}><Crosshair size={20}/> Waypoints</button>
+      <button aria-pressed={placing} disabled={m.locked || !sim || !state.selectedRobotId} onClick={()=>{setDrawer(null);setOverview(false);setPinning(false);setPickError('');setPlacing(!placing);m.setMode('manual')}}><Crosshair size={20}/> Waypoints</button>
       <button aria-pressed={drawer==='bookmarks'||pinning} onClick={()=>open('bookmarks')}><Search size={20}/> Locations</button>
 
       <button aria-pressed={drawer==='perception'} onClick={()=>open('perception')}><Radio size={20}/> Perception</button>
@@ -155,7 +175,7 @@ export function OperatorView() {
 
     </button>
 
-    <div className="hud-scene-note">{pinning?'Click the floor to place a location · Esc to cancel':placing?'Click the floor to add waypoints · Esc to finish':snapshot?.fleet?.environment?.id || 'Waiting for scene'}<span>{snapshot?.fleet?.environment?'Isaac ground truth':'Drafting never sends motion'}</span></div>
+    <div className="hud-scene-note">{pinning?'Click the floor to place a location · Esc to cancel':placing?'Click the floor to add waypoints · Esc to finish':snapshot?.fleet?.environment ? `${snapshot.fleet.environment.id} · ${DEMO_BOUNDS[2]-DEMO_BOUNDS[0]} × ${DEMO_BOUNDS[3]-DEMO_BOUNDS[1]} m` : 'Waiting for scene'}<span>{snapshot?.fleet?.environment?'Isaac ground truth':'Drafting never sends motion'}</span></div>
 
     <section className="hud-mission" aria-label="Mission control">
 
@@ -174,16 +194,16 @@ export function OperatorView() {
 
       {m.mission?.id&&!m.plan&&<button className="hud-plan-summary" onClick={()=>open('mission')}>{m.mission?.steps.filter(s=>s.state==='succeeded').length}/{m.mission?.steps.length} steps complete · View mission</button>}
 
-      {m.error&&<div role="alert" className="hud-error">{m.error}<button aria-label="Dismiss message" onClick={m.clearError}><X size={12}/></button></div>}
+      {(pickError||m.error||snapshot?.navigation?.state==='blocked')&&<div role="alert" className="hud-error">{pickError||m.error||snapshot?.navigation?.reason}{(pickError||m.error)&&<button aria-label="Dismiss message" onClick={()=>{setPickError('');m.clearError();}}><X size={12}/></button>}</div>}
 
     </section>
 
     <ViewportZoom/>
-    {drawer&&<aside className={`hud-drawer hud-drawer-${drawer}`} aria-label={`${drawer} panel`}><header><h2>{drawer==='fleet'?'Fleet overview':drawer==='settings'?'Settings':drawer==='joints'?'Telemetry':drawer==='mission'?'Mission workspace':drawer==='bookmarks'?'Pose bookmarks':'Perception'}</h2><button aria-label="Close panel" onClick={()=>setDrawer(null)}><X size={18}/></button></header><div className="hud-drawer-body">
+    {drawer&&<aside className={`hud-drawer hud-drawer-${drawer} ${pinning?'hud-drawer-picking':''}`} aria-label={`${drawer} panel`}><header><h2>{drawer==='fleet'?'Fleet overview':drawer==='settings'?'Settings':drawer==='joints'?'Telemetry':drawer==='mission'?'Mission workspace':drawer==='bookmarks'?'Pose bookmarks':'Perception'}</h2><button aria-label="Close panel" onClick={()=>setDrawer(null)}><X size={18}/></button></header><div className="hud-drawer-body">
 
-      {drawer==='fleet'&&<><label className="op-search"><Search size={15}/><input aria-label="Search fleet" placeholder="Search Carter, Go2, H1…" value={query} onChange={e=>setQuery(e.target.value)}/></label>{fleet.filter(r=>`${r.id} ${r.type}`.toLowerCase().includes(query.toLowerCase())).map(r=><button className="hud-fleet-unit" key={r.id} disabled={m.locked} onClick={()=>{state.selectRobot(r.id);setOverview(false);setDrawer(null);}}><Network size={24}/><span><b>{r.id}</b><small>{r.type} · {r.id===snapshot?.robotId?snapshot.motion.state:r.status}</small></span><span>Focus</span></button>)}<FleetDeployment manifest={snapshot?.fleet} send={control.send} enabled={sim&&!m.locked}/><BrainProvider snapshot={snapshot} send={control.send} enabled={sim}/></>}
+      {drawer==='fleet'&&<><label className="op-search"><Search size={15}/><input aria-label="Search fleet" placeholder="Search Carter, Go2, H1…" value={query} onChange={e=>setQuery(e.target.value)}/></label><FleetList robots={fleet.filter(r=>`${r.id} ${r.type}`.toLowerCase().includes(query.toLowerCase()))} locked={m.locked} enabled={sim} send={control.send} onFocus={id=>{state.selectRobot(id);setOverview(false);setDrawer(null);}}/><FleetDeployment manifest={snapshot?.fleet} send={control.send} enabled={sim&&!m.locked}/><BrainProvider snapshot={snapshot} send={control.send} enabled={sim}/></>}
 
-      {drawer==='bookmarks'&&<PoseBookmarks data={bookmarks.data} pin={pin} error={bookmarks.error} onRefresh={bookmarks.refresh} enabled={sim&&!m.locked&&!snapshot?.busy} send={control.send} onSaved={data=>{bookmarks.update(data);setPinning(false);setPin(null);}} choosing={pinning} onPin={()=>{setPinning(true);setPlacing(false);}} onGo={name=>{setPinning(false);setPlacing(false);m.setMode('agent');m.setGoal(`go to ${name}`);setDrawer(null);}}/>}
+      {drawer==='bookmarks'&&<PoseBookmarks data={bookmarks.data} pin={pin} error={bookmarks.error} onRefresh={bookmarks.refresh} enabled={sim&&!m.locked&&!snapshot?.busy} send={control.send} onSaved={data=>{bookmarks.update(data);setPinning(false);setPin(null);}} choosing={pinning} onPin={()=>{setOverview(false);setPinning(true);setPin(null);setPlacing(false);setPickError('');}} onGo={name=>{setPinning(false);setPlacing(false);m.setMode('agent');m.setGoal(`go to ${name}`);setDrawer(null);}}/>}
       {drawer==='settings'&&<><h3>Appearance</h3><div className="hud-switch"><button aria-pressed={state.colorMode==='dark'} onClick={()=>state.setColorMode('dark')}>Dark</button><button aria-pressed={state.colorMode==='light'} onClick={()=>state.setColorMode('light')}>Light</button></div><label className="hud-setting"><input type="checkbox" checked={state.sceneMotion} onChange={e=>state.setSceneMotion(e.target.checked)}/> Sensor motion</label><h3>Operating mode</h3><div className="hud-switch"><button disabled={m.locked} aria-pressed={sim} onClick={()=>state.setAppMode('simulation')}>Simulation</button><button disabled={m.locked} aria-pressed={!sim} onClick={()=>state.setAppMode('physical')}>Physical registry</button></div><p>Physical motion is unavailable in this adapter.</p><h3>Brain</h3><BrainProvider snapshot={snapshot} send={control.send} enabled={sim}/><h3>System</h3><p>ROS 2 domain 42 · {telemetry.status} · {telemetry.messages.toLocaleString()} samples</p><p>Policy: {snapshot?.runtime.policy || 'Asset-qualified controller'}</p><details><summary>Connection diagnostics</summary>{snapshot?.session?.components.map(c=><p key={c.id}>{c.id}: {c.ready?'Ready':c.message}</p>)}<p>Global planner: {snapshot?.globalNavigation?.ready?'Ready':snapshot?.globalNavigation?.reason || 'Waiting'}</p></details><details><summary>Scene & development</summary><button disabled={!m.ready||m.locked} onClick={()=>void m.changeCourse(true)}>Load L-course</button><button disabled={!m.ready||m.locked} onClick={()=>void m.changeCourse(false)}>Unload course</button><WaypointProofPanel snapshot={snapshot} send={control.send} enabled={sim}/></details></>}
 
       {(drawer==='joints'||drawer==='perception')&&<TelemetryInspector openBrain={()=>setDrawer('settings')} showCamera={drawer==='perception'} showJoints={drawer==='joints'}/>}
@@ -197,4 +217,3 @@ export function OperatorView() {
   </div>;
 
 }
-

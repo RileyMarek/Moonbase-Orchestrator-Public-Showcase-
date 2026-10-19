@@ -24,3 +24,4 @@ export class VoxelStream {
 const streams = new Map<string,VoxelStream>();
 export function voxelStream(id:string) { let s=streams.get(id); if(!s){s=new VoxelStream();streams.set(id,s);} return s; }
 export function clearVoxelStreams() { for(const s of streams.values()) s.clear(); }
+export function removeVoxelStream(id:string) { streams.delete(id); }

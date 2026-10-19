@@ -28,6 +28,7 @@ export function publishPoseFrame(sample: PoseSample, now = performance.now()) {
   poses.set(sample.robotId, {...sample,receivedAt:now,sequence:++sequence});
 }
 export function getPoseFrame(robotId: string) { return poses.get(robotId); }
+export function removeRobotFrames(robotId: string) { poses.delete(robotId); latest.delete(robotId); }
 export function getPoseFreshness(robotId: string, now = performance.now()) {
   if (connection !== 'waiting') return connection;
   const frame = poses.get(robotId);

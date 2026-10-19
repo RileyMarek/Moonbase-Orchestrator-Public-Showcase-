@@ -15,6 +15,9 @@ export const useDemoState = create<{
   missionRobotId: string; plan: {id:string;objective:string;steps:MissionStep[];verification:string}|null;
   bookmarks: BookmarkList;
   motion: Record<string, DemoPose>;
+  blocked: {robotId:string;message:string}|null;
+  generations: Record<string,number>;
+  generationCounter: number;
   preview?: any;
 }>(() => ({
   time: 0, paused: false, courseLoaded: false, provider: 'gemini', mission: undefined,
@@ -25,4 +28,7 @@ export const useDemoState = create<{
   } },
   preview: undefined,
   motion: {},
+  blocked: null,
+  generations: {},
+  generationCounter: 0,
 }));
