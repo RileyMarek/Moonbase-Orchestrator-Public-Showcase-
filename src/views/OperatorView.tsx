@@ -27,6 +27,7 @@ import { describeCommand } from '../telemetry/missionView';
 import moonbaseLogo from '../assets/moonbase-logo.png';
 
 import '../SpatialHUD.css';
+import '../VisualPolish.css';
 import { useTelemetryDisplay } from '../hooks/useTelemetryDisplay';
 import { ViewportZoom } from '../components/operator/ViewportZoom';
 import { PoseBookmarks } from '../components/operator/PoseBookmarks';

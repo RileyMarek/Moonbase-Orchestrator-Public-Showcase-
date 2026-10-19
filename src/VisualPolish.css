@@ -162,6 +162,7 @@
 .op-metric-gauges{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:16px 14px 12px}
 .op-metric-gauge{position:relative;text-align:center;min-width:0}
 .op-metric-gauge svg{display:block;width:100%;fill:none;stroke-width:2.5}
+.op-metric-gauge circle{fill:none}
 .op-metric-gauge .track{stroke:var(--op-line)}
 .op-metric-gauge .reading{stroke:var(--op-cyan);stroke-linecap:round}
 .op-metric-gauge>div{position:absolute;left:0;right:0;top:23%;display:grid;gap:2px}

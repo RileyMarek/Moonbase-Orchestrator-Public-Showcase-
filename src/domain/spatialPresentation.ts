@@ -1,6 +1,6 @@
-export const SENSOR_FIELD_RADIUS_M = 1.2;
+export const SENSOR_FIELD_RADIUS_M = 3.2;
 export const LOCAL_VOXEL_LIMIT = 2048;
-export const SENSOR_FRESHNESS_MS = 1000;
+export const SENSOR_FRESHNESS_MS = 3000;
 
 export function sensorFresh(now: number, poseAt: number, depthAt: number, synchronized: boolean) {
   return synchronized && [poseAt, depthAt].every(at => Number.isFinite(at) && at > 0 && now >= at && now - at < SENSOR_FRESHNESS_MS);

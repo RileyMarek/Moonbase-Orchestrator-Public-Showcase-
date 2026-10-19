@@ -91,11 +91,12 @@ function ContextLossObserver(){
  */
 
 function robotFocusOffset(robotId: string | null) {
-
-  return useAppStore.getState().robots.find(r => r.id === robotId)?.type === 'quadruped'
-
-    ? new Vector3(1.1, .6, 1.4) : new Vector3(2.8, 1.3, 3.6);
-
+  const type = useAppStore.getState().robots.find(r => r.id === robotId)?.type;
+  return type === 'quadruped'
+    ? new Vector3(1.8, 0.9, 2.2)
+    : type === 'amr'
+    ? new Vector3(2.5, 1.2, 3.2)
+    : new Vector3(3.6, 1.8, 4.4);
 }
 
 
@@ -350,22 +351,19 @@ export const Viewport3D: React.FC<{course?: Course | null;presentation?:'astro'|
 
 
   const selectedRobotId=useAppStore(s=>s.selectedRobotId);
-
-  const origin=spatial?.pose ? [spatial.pose[1],.03,spatial.pose[0]] as [number,number,number] : selectedRobotId && getPoseFrame(selectedRobotId) ? worldPoseToThree(getPoseFrame(selectedRobotId)!).position : null;
+  const activeRobots = robots.filter(r => r.mode === appMode);
+  const currentUnit = activeRobots.find(r => r.id === selectedRobotId) || activeRobots[0];
+  const origin = currentUnit ? [currentUnit.position[0], 0.03, currentUnit.position[2]] as [number, number, number] : null;
 
   const waypoints=origin&&draftedPoints.length?[origin,...draftedPoints]:draftedPoints;
 
   const colorMode=useAppStore(s=>s.colorMode);
 
-  const activeRobots = robots.filter(r => r.mode === appMode);
-
-
-
   return (
 
     <div ref={viewportRef} className="robot-viewport" data-rendering={rendering}><RenderGuard>
 
-      <Canvas frameloop={rendering ? 'always' : 'never'} dpr={[1,1.5]} gl={{antialias:true,powerPreference:"high-performance"}} camera={{ position: [2.8, 2.3, 3.6], fov: 45 }} >
+      <Canvas frameloop={rendering ? 'always' : 'never'} dpr={[1,1.5]} gl={{antialias:true,powerPreference:"high-performance"}} camera={{ position: [3.6, 2.2, 4.4], fov: 45 }} >
 
         <ContextLossObserver/>
 
