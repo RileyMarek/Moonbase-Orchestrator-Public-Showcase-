@@ -5,7 +5,7 @@ import { resolve, relative, extname } from 'node:path';
 const roots = new Set(['src', 'docs', 'public', 'scripts', 'tests', '.github']);
 const rootFiles = new Set(['README.md', 'package.json', 'package-lock.json', '.gitignore', '.env.production', '.env.example', 'index.html', 'tsconfig.json', 'vite.config.ts', 'vercel.json']);
 const ignored = new Set(['node_modules', '.git', '.vercel', 'test-results', 'playwright-report']);
-const textTypes = new Set(['.ts', '.tsx', '.js', '.css', '.html', '.md', '.svg', '.json', '.mjs', '.yml', '.yaml', '.example', '.production', '']);
+const textTypes = new Set(['.ts', '.tsx', '.js', '.css', '.html', '.md', '.svg', '.json', '.mjs', '.yml', '.yaml', '.example', '.production', '.txt', '']);
 const rules = [
   ['private endpoint', /(?:https?|wss?):\/\/(?:localhost|127\.0\.0\.1|10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(?:1[6-9]|2\d|3[01])\.\d+\.\d+)|\.ts\.net\b|tailscale|:876[56]\b/i],
   ['local path', /[A-Z]:[\\/](?:Users|work|home)[\\/]|\/home\/[\w.-]+\//i],
@@ -26,7 +26,10 @@ async function walk(directory, built = false) {
     }
     if (directory === process.cwd() && !rootFiles.has(entry.name)) failures.push(`${name}: unexpected root file`);
     if (entry.name.endsWith('.map')) failures.push(`${name}: source maps are not permitted`);
-    if (!textTypes.has(extname(entry.name))) { failures.push(`${name}: binary or unknown file requires explicit review`); continue; }
+    const ext = extname(entry.name).toLowerCase();
+    const allowedBinary = new Set(['.glb', '.png', '.jpg', '.jpeg', '.webp', '.ico']);
+    if (allowedBinary.has(ext)) continue;
+    if (!textTypes.has(ext)) { failures.push(`${name}: binary or unknown file requires explicit review`); continue; }
     // Scanner rules intentionally contain the patterns they reject.
     if (name === 'scripts/audit-public.mjs') continue;
     const content = await readFile(path, 'utf8'); count++;

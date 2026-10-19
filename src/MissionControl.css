@@ -1,0 +1,15 @@
+.mission-control {position:relative;z-index:3;background:var(--paper,#cbcbcb);border-top:1px solid #777; margin:18px; padding:14px 8px; font-size:11px;color:#222;}
+.mission-control h4 {display:flex;justify-content:space-between;gap:8px;}
+.mission-control p {line-height:1.5;color:#383838;}
+.mission-control fieldset {border:0;padding:0;margin:0;min-width:0;}
+.mission-control button,.mission-control select,.mission-control input {font:inherit;color:#ede4d5;background:#282522;border:1px solid #625348;padding:7px;border-radius:3px;max-width:100%;}
+.mission-control button {cursor:pointer;margin:3px;}
+.mission-control button:disabled {opacity:.4;cursor:default;}
+.mission-control input {width:100%;box-sizing:border-box;}
+.mission-control label {display:block;min-width:0;color:#383838;}
+.mission-editor {padding-left:22px;max-height:390px;overflow:auto;}
+.mission-editor li {padding:8px 0;border-bottom:1px solid #403a34;}
+.mission-fields {display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.mission-row-actions {display:flex;justify-content:flex-end;}
+.mission-control small {display:block;color:#383838;line-height:1.5;}
+.mission-control [role=alert] {color:#8d240c;}

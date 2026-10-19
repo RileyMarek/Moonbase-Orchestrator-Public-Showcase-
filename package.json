@@ -1,6 +1,7 @@
 {
   "name": "moonbase-showcase",
   "version": "0.1.0",
+  "author": "Riley Marek <rileyc.marek@gmail.com>",
   "private": true,
   "type": "module",
   "scripts": {
@@ -16,6 +17,7 @@
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "three": "0.186.1",
+    "lucide-react": "^1.43.0",
     "zustand": "5.0.15"
   },
   "devDependencies": {

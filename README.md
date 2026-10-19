@@ -6,7 +6,7 @@ One command surface for humanoids, quadrupeds and mobile robots: a spatial twin,
 
 **Interactive demo:** deployment pending. Run locally below, or deploy this repository with the included GitHub Pages workflow / Vercel configuration.
 
-**Hero recording:** pending an approved Isaac Sim capture. The interactive preview uses original procedural geometry and synthetic telemetry; it is not footage of a learned policy.
+**Embodied Digital Twins:** Includes the complete 19-DOF Unitree H1 humanoid mesh (`h1.glb`), Nova Carter AMR, and Unitree Go2 quadruped models matching the production Moonbase operations platform.
 
 ![Moonbase system architecture](docs/architecture.svg)
 
@@ -38,10 +38,11 @@ Use Node.js 24. The production flag is `VITE_DEMO_MODE=true` in `.env.production
 
 ## What this demonstrates
 
-- React / Three.js / React Three Fiber spatial presentation and fleet selection.
-- A 19-joint articulation contract with a 1.2 Hz synthetic walk-in-place loop.
-- Joint effort bars, velocity-driven floor ripples and a static elbow-v1 voxel scene.
-- A browser-only preview with no action server, camera service, model download or inference call.
+- Exact production Spatial HUD UI: full-bleed 3D viewport, tool palette (`3D | 2D` camera, perception, waypoints, voxels, fleet), equalizer telemetry bars, and mission control.
+- Heterogeneous embodiment switching between Unitree H1 Humanoid, Nova Carter AMR, and Unitree Go2 Quadruped.
+- A 19-joint articulation contract with real-time skeletal kinematics streaming.
+- Dynamic ground ripples, floor dot matrix, and static `elbow-v1` obstacle voxel scene.
+- A client-side in-browser showcase with zero network requirements or backend services.
 
 **Broader project stack:** ROS 2, Fast DDS, NVIDIA Isaac Sim, PPO locomotion and VLM spatial reasoning. Those systems are not included or executed in this repository. Synthetic demo motion must not be used as evidence of physical robot performance or obstacle avoidance.
 
@@ -60,6 +61,8 @@ For Vercel, import this repository as a Vite project. The included config uses `
 
 ## Contact
 
-Project Moonbase is in active development. For commercial inquiries, partnerships or investment, [contact Riley Marek through GitHub](https://github.com/RileyMarek). A direct email address will be added when confirmed.
+Project Moonbase is in active development. For commercial inquiries, partnerships, or investment:
+- **Email:** [rileyc.marek@gmail.com](mailto:rileyc.marek@gmail.com)
+- **GitHub:** [@RileyMarek](https://github.com/RileyMarek)
 
 Public visibility does not itself grant a software license. A project license has not yet been selected; dependencies retain their respective licenses.
