@@ -12,22 +12,59 @@ export function HeadCamera({robotId, enabled, ageMs}: {robotId: string; enabled:
     canvas.width = 320;
     canvas.height = 240;
     const ctx = canvas.getContext('2d');
-    if (ctx) {
-      ctx.fillStyle = view === 'rgb' ? '#0b161e' : '#140c1e';
+    if (!ctx) return;
+
+    let frame = 0;
+    const render = () => {
+      frame++;
+      const time = performance.now() / 1000;
+      ctx.fillStyle = view === 'rgb' ? '#080e14' : '#12091c';
       ctx.fillRect(0, 0, 320, 240);
+
+      ctx.strokeStyle = view === 'rgb' ? 'rgba(76, 252, 223, 0.15)' : 'rgba(249, 115, 22, 0.15)';
+      ctx.lineWidth = 1;
+      for (let y = 140; y <= 230; y += 18) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(320, y);
+        ctx.stroke();
+      }
+      for (let x = -80; x <= 400; x += 36) {
+        ctx.beginPath();
+        ctx.moveTo(160, 120);
+        ctx.lineTo(x, 240);
+        ctx.stroke();
+      }
+
+      const bx = 110 + Math.sin(time) * 15;
+      const by = 80 + Math.cos(time * 0.8) * 8;
       ctx.strokeStyle = view === 'rgb' ? '#4cfcdf' : '#f97316';
       ctx.lineWidth = 1.5;
-      ctx.strokeRect(40, 30, 240, 180);
+      ctx.strokeRect(bx, by, 90, 75);
+
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(bx - 4, by + 12); ctx.lineTo(bx - 4, by - 4); ctx.lineTo(bx + 12, by - 4);
+      ctx.moveTo(bx + 94, by + 12); ctx.lineTo(bx + 94, by - 4); ctx.lineTo(bx + 78, by - 4);
+      ctx.stroke();
+
       ctx.fillStyle = view === 'rgb' ? '#4cfcdf' : '#f97316';
-      ctx.font = '11px monospace';
-      ctx.fillText(`SYNTHETIC ONBOARD CAM · ${view.toUpperCase()}`, 50, 60);
-      ctx.fillText(`TARGET EMBODIMENT: ${robotId.toUpperCase()}`, 50, 80);
-      ctx.fillText(`DEPTH RANGE: 1.84m · CLEARANCE: NOMINAL`, 50, 100);
-      ctx.fillText(`CALIBRATION: INTRINSICS VERIFIED`, 50, 120);
-    }
-    const dataUrl = canvas.toDataURL('image/png');
-    setImage({ robotId, url: dataUrl, view });
-    setRate(20.0);
+      ctx.font = '10px monospace';
+      ctx.fillText(`TRACK [PASSAGE] ${(0.92 + 0.04 * Math.sin(time)).toFixed(2)}`, bx, by - 8);
+
+      ctx.font = '10px monospace';
+      ctx.fillText(`CAM · ${view.toUpperCase()} · ${robotId.toUpperCase()}`, 15, 22);
+      ctx.fillText(`T+${time.toFixed(1)}s · FRM #${frame}`, 15, 36);
+      ctx.fillText(`DEPTH RANGE: 1.84m · CLEARANCE: PASS`, 15, 225);
+
+      const dataUrl = canvas.toDataURL('image/png');
+      setImage({ robotId, url: dataUrl, view });
+      setRate(20.0);
+    };
+
+    render();
+    const interval = setInterval(render, 250);
+    return () => clearInterval(interval);
   }, [robotId, enabled, view]);
 
   const source = image?.robotId === robotId && image.view === view ? image.url : null;

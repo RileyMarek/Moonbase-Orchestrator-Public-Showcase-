@@ -299,31 +299,30 @@ export const RobotModel: React.FC<{ robot: Robot; onFocus?:()=>void;selectable?:
    */
 
   const handleClick = (e: ThreeEvent<MouseEvent>) => {
-
     e.stopPropagation();
-
-    if(!selectable&&useAppStore.getState().selectedRobotId!==robot.id)return;
     selectRobot(robot.id);
-
     onFocus?.();
-
   };
 
-
-
   // Color mapping based on status and selection
-
-  // The logo humanoid is primarily purple.
-
   const baseColor = robot.type === 'humanoid' ? '#8b5cf6' : '#e5e7eb';
-
   const finalColor = robot.status === 'error' ? '#ef4444' : isSelected ? '#06b6d4' : baseColor;
 
-
-
   return (
-
     <group ref={groupRef} position={robot.position} onClick={handleClick}>
+      <mesh
+        position={[0, robot.type === 'humanoid' ? 0.9 : robot.type === 'amr' ? 0.4 : 0.35, 0]}
+      >
+        <cylinderGeometry
+          args={[
+            robot.type === 'humanoid' ? 0.55 : robot.type === 'amr' ? 0.75 : 0.55,
+            robot.type === 'humanoid' ? 0.55 : robot.type === 'amr' ? 0.75 : 0.55,
+            robot.type === 'humanoid' ? 1.85 : robot.type === 'amr' ? 0.85 : 0.75,
+            16,
+          ]}
+        />
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+      </mesh>
 
       {robot.type === 'humanoid' && <H1Model robotId={robot.id} selected={isSelected} enabled={robot.mode === 'simulation'} />}
 

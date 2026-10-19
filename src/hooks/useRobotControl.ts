@@ -5,6 +5,7 @@ import { fleetRobots, type FleetManifest } from '../domain/fleet';
 import type { WaypointProof } from '../domain/waypointProof';
 import { demoAction } from '../demo/actions';
 import { demoCourse, useDemoState } from '../demo/state';
+import { getPoseFrame } from '../telemetry/jointStream';
 
 export const ACTION_URL = '';
 
@@ -57,15 +58,20 @@ export function useRobotControl(enabled: boolean) {
     const timer = setInterval(() => {
       const now = performance.now();
       const currentRobot = selectedId || 'bot-01';
-      const isPaused = useDemoState.getState().paused;
+      const demoState = useDemoState.getState();
+      const isPaused = demoState.paused;
+      const poseFrame = getPoseFrame(currentRobot);
+      const yaw = poseFrame ? 2 * Math.atan2(poseFrame.orientation[2], poseFrame.orientation[3]) : 0;
+      const pose = poseFrame ? [poseFrame.position[0], poseFrame.position[1], yaw] : [0, 0, 0];
 
       const nextSnapshot: ControlSnapshot = {
         robotId: currentRobot,
         ready: true,
-        busy: !isPaused,
+        busy: false,
         runtimeFresh: true,
-        speed_m_s: isPaused ? 0 : 0.75,
+        speed_m_s: isPaused ? 0 : 0.72 + 0.04 * Math.sin(now / 400),
         course: demoCourse,
+        pose,
         runtime: {
           policy_state: isPaused ? 'STOPPED' : 'ACTIVE',
           embodiment_type: currentRobot === 'carter-01' ? 'amr' : currentRobot === 'go2-01' ? 'quadruped' : 'humanoid',
@@ -76,22 +82,57 @@ export function useRobotControl(enabled: boolean) {
           stop_controller_qualified: true,
         },
         displayTelemetry: {
-          speed: isPaused ? 0 : 0.75,
-          hz: 20.0,
-          depth: 0.45,
+          speed: isPaused ? 0 : 0.72 + 0.04 * Math.sin(now / 400),
+          hz: 20.0 + 0.2 * Math.cos(now / 600),
+          depth: 0.45 + 0.03 * Math.sin(now / 500),
           updatedAt: now,
           valid: true,
         },
         perception: {
           ready: true,
-          frames: 1850,
+          frames: Math.floor(1850 + (now / 50)),
           error: '',
-          age_s: 0.1,
+          age_s: 0.05,
+          map: {
+            voxels: 1420 + Math.floor(15 * Math.sin(now / 1000)),
+            new_voxels: 35,
+            resolution_m: 0.05,
+            saturated: false,
+          },
+          camera: {
+            intrinsics: [240, 0, 160, 0, 240, 120, 0, 0, 1],
+            world_from_optical: [0, 0, 1, 0, -1, 0, 0, 0, 0, -1, 0, 1.45, 0, 0, 0, 1],
+            width: 320,
+            height: 240,
+          },
+        },
+        cloud: {
+          ready: true,
+          provider: 'Gemini 1.5 Flash / Molmo Spatial',
+          model_id: 'molmo-7b-d-0924',
+          error: '',
+          readiness: 'Spatial reasoning pipeline active',
+        },
+        preview: demoState.preview,
+        mission: demoState.mission,
+        navigation: {
+          state: isPaused ? 'held' : 'tracking',
+          controller: 'Unified_PPO_Locomotion',
+          footprint_radius_m: currentRobot === 'carter-01' ? 0.45 : currentRobot === 'go2-01' ? 0.35 : 0.40,
+          revocations: 0,
+          hz: 20.0,
+        },
+        planning: {
+          stationary: isPaused,
+          stationary_window_sec: 1.5,
+          cloud_deadline_sec: 2.0,
+          blocked: [],
         },
         motion: {
           state: isPaused ? 'held' : 'active',
           kind: 'walk',
-          progress: 0.72,
+          progress: ((now / 2000) % 1),
+          remaining: isPaused ? 0 : 0.45,
           message: isPaused ? 'Stance held · Ready' : 'Synthesizing gait trajectory',
         },
         session: {
@@ -100,6 +141,7 @@ export function useRobotControl(enabled: boolean) {
           components: [
             { id: 'telemetry', ready: true, message: 'Synthetic 60Hz Telemetry' },
             { id: 'kinematics', ready: true, message: '19-DOF Rig Active' },
+            { id: 'perception', ready: true, message: 'Molmo Spatial Pipeline Ready' },
           ],
           blockers: [],
         },

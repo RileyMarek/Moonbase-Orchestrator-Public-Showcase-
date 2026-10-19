@@ -54,5 +54,23 @@ export async function demoAction(path: string, input: object = {}): Promise<unkn
       temperature: 30, assignedTasks: ['Browser-only demo'], status: 'idle' });
     return { demo: true };
   }
+  if (path === '/perception/preview') {
+    const preview = {
+      id: crypto.randomUUID(),
+      state: 'complete',
+      model_id: 'molmo-7b-d-0924',
+      total_sec: 0.42,
+      inference_sec: 0.38,
+      historical_only: false,
+      points: [
+        { image: [0.52, 0.65], world: [1.85, 0.45], clearance: true, reason: 'Traversable corridor floor' },
+        { image: [0.68, 0.58], world: [2.10, 0.82], clearance: true, reason: 'Candidate waypoint' },
+        { image: [0.35, 0.42], world: [0.95, -0.60], clearance: false, reason: 'Obstacle boundary clearance rejected' }
+      ],
+      motion_dispatched: false,
+    };
+    useDemoState.setState({ preview });
+    return preview;
+  }
   throw new Error('Unavailable in the public demo. No live services or model inference are connected.');
 }
