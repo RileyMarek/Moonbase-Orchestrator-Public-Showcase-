@@ -27,7 +27,7 @@ test('swept footprints reject a robot between two otherwise clear endpoints',()=
   assert.match(clearanceIssue(alpha,alpha,target,[alpha,bravo])!,/bravo/);
 });
 test('body size, clearance, self exclusion, finite coordinates, and scene bounds are enforced',()=>{
-  const a={...alpha,x:0},b={...bravo,x:1.1};
+  const a={...alpha,x:0},b={...bravo,x:1.34};
   assert.match(clearanceIssue(a,a,a,[a,b])!,/bravo/);
   assert.equal(clearanceIssue(a,a,a,[a,{...b,type:'humanoid'}]),null);
   assert.equal(clearanceIssue(a,a,a,[a]),null);
@@ -45,7 +45,7 @@ test('clear endpoints do not permit a route through an obstacle',()=>{
 test('a robot inserted during motion holds the mission before footprints touch',()=>{
   let pose={x:-1,y:-2,yaw:0,speed:0},elapsed=0;
   let mission:MissionSnapshot={id:'dynamic',state:'running',steps:[{command:{kind:'walk',x:1,y:-2},state:'pending'}]};
-  const obstacle={...bravo,x:.3};let blocked:string|null=null;
+  const obstacle={...bravo,x:.5};let blocked:string|null=null;
   for(let i=0;i<100&&!blocked;i++){
     const next=advanceCheckedMission(pose,mission,.1,elapsed,{...alpha,...pose},[{...alpha,...pose},obstacle]);
     pose=next.pose;mission=next.mission;elapsed=next.elapsed;blocked=next.blocked;

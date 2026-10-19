@@ -23,7 +23,13 @@ Present fleet state, robot articulation, spatial occupancy and joint dynamics in
 | Spawn validation | Reject invalid/nonfinite coordinates, scene-boundary violations and footprints overlapping a bot or static obstacle. Show the blocking reason in the deployment form. |
 | Collision checks | Preflight every route segment and check every swept movement segment, including the background patrol. Hold before a new collision, show the blocker, and recheck before resuming. No automatic route detours. |
 
-Clearance uses conservative circular footprints: H1 radius 0.45 m, Go2 0.50 m and Carter 0.65 m, plus 0.10 m separation. Static obstacle boxes are inflated by the moving robot's radius and margin. The complete footprint must stay inside ROS XY bounds `[-2.5,-3.5,4.5,3.5]`. Checks use current animation poses, not delayed inspector readings. This is frontend kinematic validation, not a physics controller.
+Clearance uses conservative circular footprints: H1 radius 0.60 m, Go2 0.50 m and Carter 0.65 m, plus 0.10 m separation. Static obstacle boxes are inflated by the moving robot's radius and margin. The complete footprint must stay inside ROS XY bounds `[-2.5,-3.5,4.5,3.5]`. Checks use current animation poses, not delayed inspector readings. This is frontend kinematic validation, not a physics controller.
+
+Waypoint drafts belong to individual robots. Switching units cancels picking and restores that unit's draft; dispatch consumes it, and reached targets disappear. Floor picking projects directly onto the ground plane in both camera modes and ignores decorative mesh occlusion and orbit drags.
+
+Locations use one shared bookmark source. Drop a pin retains the form while picking, previews the chosen point, and saves its heading. Each location can be deleted; deletion invalidates prepared local plans.
+
+Demo poses use ground anchors. H1 and Go2 retain their model standing offsets. Every rendered frame clamps invalid/submerged anchors and lifts the posed mesh above the floor; this visual fallback does not replace swept collision checks.
 
 ## Telemetry contract
 

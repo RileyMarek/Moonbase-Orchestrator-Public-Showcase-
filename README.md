@@ -34,6 +34,10 @@ The Fleet drawer has a delete button for each bot. Deleting the selected bot foc
 
 Navigation checks the whole route before dispatch and the swept body footprint on every movement tick. If a new blocker appears, the robot holds before collision and explains what blocked it. Remove/move the blocking bot or choose different waypoints, then resume. Checks use conservative body radii plus 0.10 m clearance. They reject or stop blocked paths rather than automatically rerouting; choose waypoints around the divider for a clear route to Terminal.
 
+Waypoint drafts are saved per bot. Switch units to restore their drafts; reached waypoints disappear as the route runs. Click the floor in either camera mode to add targets. Dragging the camera does not add waypoints.
+
+Locations has one marker per saved place. Enter a name, choose Drop a pin, click the floor, then Save pin. The trash button deletes a location. Robots retain their standing offsets and have a per-frame floor recovery guard.
+
 Voxels toggles the synthetic floor/obstacle point cloud. The decorative flowing sensor fields surround every fleet unit independently of the Perception drawer; Sensor motion in Settings pauses that animation. The Perception tool highlights only while its drawer is open.
 
 ```sh

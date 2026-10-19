@@ -1,3 +1,4 @@
+import { aboveFloor, FLOOR_Y, VisualBounds } from '../demo/grounding';
 /**
 
  * Author: Riley Marek
@@ -14,7 +15,7 @@
 
 
 
-import React, { useRef } from 'react';
+import React, { useMemo, useRef } from 'react';
 
 import type { ThreeEvent } from '@react-three/fiber';
 
@@ -179,6 +180,9 @@ const AMRModel: React.FC<{ color: string; variant?: 'flat' | 'arm' }> = ({ color
 export const RobotModel: React.FC<{ robot: Robot; onFocus?:()=>void;selectable?:boolean }> = ({ robot, onFocus,selectable=true }) => {
 
   const groupRef = useRef<Group>(null);
+  const visualRef=useRef<Group>(null);
+  const labelRef=useRef<HTMLDivElement>(null);
+  const support=useMemo(()=>new VisualBounds(),[]);
 
   const selectedRobotId = useAppStore((state) => state.selectedRobotId);
 
@@ -286,9 +290,21 @@ export const RobotModel: React.FC<{ robot: Robot; onFocus?:()=>void;selectable?:
 
     }
 
-  });
+  }, -3);
 
 
+
+  // Hard floor recovery: malformed/negative heights are reset and the posed mesh is lifted above the floor.
+  useFrame(()=>{
+    if(!groupRef.current||!visualRef.current)return;
+    groupRef.current.position.y=aboveFloor(groupRef.current.position.y);
+    visualRef.current.position.y=0;
+    const bounds=support.measure(visualRef.current);
+    if(Number.isFinite(bounds.min.y)){
+      const lift=Math.max(0,FLOOR_Y-bounds.min.y);visualRef.current.position.y+=lift;
+      if(labelRef.current)labelRef.current.dataset.groundMinY=String(bounds.min.y+lift);
+    }
+  },-1);
 
   /**
 
@@ -300,6 +316,7 @@ export const RobotModel: React.FC<{ robot: Robot; onFocus?:()=>void;selectable?:
 
   const handleClick = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
+    if(!selectable)return;
     selectRobot(robot.id);
     onFocus?.();
   };
@@ -309,7 +326,7 @@ export const RobotModel: React.FC<{ robot: Robot; onFocus?:()=>void;selectable?:
   const finalColor = robot.status === 'error' ? '#ef4444' : isSelected ? '#06b6d4' : baseColor;
 
   return (
-    <group ref={groupRef} position={robot.position} onClick={handleClick}>
+    <group ref={groupRef} position={[robot.position[0],aboveFloor(robot.position[1]),robot.position[2]]} onClick={handleClick} name={`robot-${robot.id}`}>
       <mesh
         position={[0, robot.type === 'humanoid' ? 0.9 : robot.type === 'amr' ? 0.4 : 0.35, 0]}
       >
@@ -324,17 +341,19 @@ export const RobotModel: React.FC<{ robot: Robot; onFocus?:()=>void;selectable?:
         <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       </mesh>
 
+      <group ref={visualRef} name={`robot-visual-${robot.id}`}>
       {robot.type === 'humanoid' && <H1Model robotId={robot.id} selected={isSelected} enabled={robot.mode === 'simulation'} />}
 
       {robot.type === 'quadruped' && <Go2Model robotId={robot.id} color={isSelected ? '#4b9e78' : '#a7b8ae'} />}
 
       {robot.type === 'amr' && <AMRModel color={finalColor} variant={robot.amrVariant} />}
+      </group>
 
       
 
       <Html position={[0, robot.type === 'humanoid' ? (robot.position[1] > .5 ? 1.3 : 2.4) : robot.type === 'amr' ? .76 : .32, 0]} center zIndexRange={[4, 0]}>
 
-        <div className={`px-1.5 py-0.5 rounded text-[10px] font-medium whitespace-nowrap bg-gray-900/60 ${isSelected ? 'text-cyan-200' : 'text-slate-300'}`}>
+        <div ref={labelRef} data-robot-id={robot.id} className={`px-1.5 py-0.5 rounded text-[10px] font-medium whitespace-nowrap bg-gray-900/60 ${isSelected ? 'text-cyan-200' : 'text-slate-300'}`}>
 
           {robot.id}
 

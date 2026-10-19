@@ -1,10 +1,11 @@
+import { FLOOR_Y } from './grounding';
 import { useAppStore, type Robot } from '../store';
 import { demoCourse, useDemoState } from './state';
 import type { MissionStep } from '../domain/types';
 import { planDemoTask, validateDemoSteps } from './planner';
-import { clearanceIssue, routeIssue } from './clearance';
+import { clearanceIssue, routeIssue, DEMO_BOUNDS } from './clearance';
 import { currentDemoBodies } from './fleet';
-import { removeRobotFrames } from '../telemetry/jointStream';
+import { removeRobotFrames, getPoseFrame } from '../telemetry/jointStream';
 import { removeVoxelStream } from '../telemetry/voxelStream';
 
 /** Local UI simulator only. No transport, controller, inference, or robot dispatch. */
@@ -56,11 +57,22 @@ export async function demoAction(path: string, input: object = {}): Promise<unkn
     const name = String(body.name || '').trim();
     if (!name || name.length > 40 || /^(?:__proto__|constructor|prototype)$/.test(name)) throw new Error('Choose a valid location name');
     const robot = useAppStore.getState().robots.find(r => r.id === useAppStore.getState().selectedRobotId);
-    const pose = body.pose as number[] | undefined || [robot?.position[2] || 0, robot?.position[0] || 0, 0];
+    const frame=robot?getPoseFrame(robot.id):undefined;
+    if(!body.pose&&!robot)throw new Error('Select a bot or drop a location pin first');
+    const pose = body.pose as number[] | undefined || [frame?.position[0]??robot!.position[2],frame?.position[1]??robot!.position[0],frame?2*Math.atan2(frame.orientation[2],frame.orientation[3]):state.motion[robot!.id]?.yaw||0];
     if (pose.length !== 3 || pose.some(v => !Number.isFinite(v))) throw new Error('Invalid demo pose');
-    const bookmarks = { ...state.bookmarks, items: { ...state.bookmarks.items,
-      [name]: { label: name, pose, visual_target: String(body.visual_target || ''), available: true, reason: '' } } };
-    useDemoState.setState({ bookmarks }); return bookmarks;
+    if(pose[0]<DEMO_BOUNDS[0]||pose[1]<DEMO_BOUNDS[1]||pose[0]>DEMO_BOUNDS[2]||pose[1]>DEMO_BOUNDS[3])throw new Error('Place the location inside the scene boundary');
+    const key=Object.keys(state.bookmarks.items).find(key=>key.toLowerCase()===name.toLowerCase())||name;
+    const bookmarks = { ...state.bookmarks, revision:crypto.randomUUID(), items: { ...state.bookmarks.items,
+      [key]: { label: name, pose:[...pose], visual_target: String(body.visual_target || ''), available: true, reason: '' } } };
+    useDemoState.setState({ bookmarks,plan:null }); return bookmarks;
+  }
+  if(path==='/bookmarks/delete') {
+    const name=String(body.name||'');
+    if(!Object.hasOwn(state.bookmarks.items,name))throw new Error('Location was already deleted');
+    const items={...state.bookmarks.items};delete items[name];
+    const bookmarks={...state.bookmarks,revision:crypto.randomUUID(),items};
+    useDemoState.setState({bookmarks,plan:null});return bookmarks;
   }
   if (path === '/fleet/spawn') {
     const app = useAppStore.getState(), id = String(body.robot_id || '');
@@ -73,7 +85,7 @@ export async function demoAction(path: string, input: object = {}): Promise<unkn
     if(issue)throw new Error(`Spawn bot in a valid location: ${issue}`);
     const generation=state.generationCounter+1;
     useDemoState.setState({motion:{...state.motion,[id]:{x:pose.x,y:pose.y,yaw:pose.yaw,speed:0}},generations:{...state.generations,[id]:generation},generationCounter:generation});
-    app.addRobot({ id, type, mode: 'simulation', position: [pose.y,0,pose.x], battery: 100,
+    app.addRobot({ id, type, mode: 'simulation', position: [pose.y,FLOOR_Y,pose.x], battery: 100,
       temperature: 30, assignedTasks: ['Browser-only demo'], status: 'idle' });
     return { demo: true };
   }

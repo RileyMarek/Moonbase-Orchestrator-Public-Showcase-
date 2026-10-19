@@ -1,3 +1,4 @@
+import { FLOOR_Y } from '../demo/grounding';
 import { useEffect, useState } from 'react';
 import { useAppStore } from '../store';
 import { sampleDemo, demoVoxelSnapshot } from '../telemetry/demoMockStream';
@@ -88,11 +89,11 @@ export function useSimSocket() {
         if(state.paused&&heldJoints[robot.id])Object.assign(joints,heldJoints[robot.id]);
         else heldJoints[robot.id]={...joints};
         publishJointFrame({robotId:robot.id,joints,efforts,velocities,stamp:time},now);
-        publishPoseFrame({robotId:robot.id,position:[pose.x,pose.y,0],orientation:[0,0,Math.sin(pose.yaw/2),Math.cos(pose.yaw/2)],stamp:time},now);
+        publishPoseFrame({robotId:robot.id,position:[pose.x,pose.y,FLOOR_Y],orientation:[0,0,Math.sin(pose.yaw/2),Math.cos(pose.yaw/2)],stamp:time},now);
         const stream=voxelStream(robot.id);
         if(!stream.synchronized)stream.accept(voxelBytes);
         stream.receivedAt=now;
-        if(flush){app.updateRobotPosition(robot.id,[pose.y,0,pose.x]);app.updateRobotJoints(robot.id,joints);app.updateRobotDynamics(robot.id,efforts,velocities);}
+        if(flush){app.updateRobotPosition(robot.id,[pose.y,FLOOR_Y,pose.x]);app.updateRobotJoints(robot.id,joints);app.updateRobotDynamics(robot.id,efforts,velocities);}
       }
       if(flush){useDemoState.setState({time,motion:{...poses}});setMessages(n=>(n+robots.length)%100000);lastUI=now;}
       raf=requestAnimationFrame(tick);

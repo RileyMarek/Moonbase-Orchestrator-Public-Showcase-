@@ -42,7 +42,7 @@ function RiggedH1({ robotId, selected, enabled }: { robotId:string; selected:boo
     const now=performance.now();
     const pose=enabled?getPoseFrame(robotId):undefined;
     if(pose) hasWorld.current=true;
-    root.position.setY(hasWorld.current?0:neutralHeight);
+    root.position.setY(neutralHeight);
     const frame=enabled?getJointFrame(robotId):undefined;
     if(frame && frame.sequence !== lastSequence.current){
       const result=applyH1Pose(rig,frame.joints);
@@ -60,7 +60,7 @@ function RiggedH1({ robotId, selected, enabled }: { robotId:string; selected:boo
       const xyz=pose?pose.position.map(v=>v.toFixed(2)).join(' / '):'—';
       setDiagnostic(previous=>previous.worldPlaced===hasWorld.current&&previous.world===world&&previous.xyz===xyz&&previous.state===state&&previous.matched===applied.current.matched&&previous.unknown===applied.current.unknown&&previous.stamp===applied.current.stamp?previous:{state,matched:applied.current.matched,unknown:applied.current.unknown,stamp:applied.current.stamp,elbow,world,xyz,worldPlaced:hasWorld.current});
     }
-  });
+  }, -2);
   return <>
     <primitive object={model} scale={[0.92, 0.92, 0.92]} dispose={null}/>
     {selected&&<Html position={[0,diagnostic.worldPlaced?1.05:2.08,0]} center zIndexRange={[5,0]}>

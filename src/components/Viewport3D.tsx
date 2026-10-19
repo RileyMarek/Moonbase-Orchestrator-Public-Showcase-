@@ -1,3 +1,4 @@
+import { FloorPicker } from './FloorPicker';
 import { RobotSensorField } from './RobotSensorField';
 import { RobotGrounding } from "./RobotGrounding";
 
@@ -301,7 +302,7 @@ const OperationBoundary = () => (
 
  */
 
-export const Viewport3D: React.FC<{course?: Course | null;presentation?:'astro'|'operator';steps?:MissionStep[];spatial?:ControlSnapshot|null;selectionEnabled?:boolean;overviewPanel?:boolean;onRobotFocus?:()=>void;overview?:boolean;showPerception?:boolean;showVoxels?:boolean;drafting?:boolean;onDraft?:(x:number,y:number)=>void;locations?:{name:string;pose:number[]}[]}> = ({course,presentation='astro',steps=[],spatial,onRobotFocus,selectionEnabled=true,overviewPanel=false,overview=false,showPerception=true,showVoxels=true,drafting=false,onDraft,locations=[]}) => {
+export const Viewport3D: React.FC<{course?: Course | null;presentation?:'astro'|'operator';steps?:MissionStep[];spatial?:ControlSnapshot|null;selectionEnabled?:boolean;overviewPanel?:boolean;onRobotFocus?:()=>void;overview?:boolean;showPerception?:boolean;showVoxels?:boolean;drafting?:boolean;onDraft?:(x:number,y:number)=>void;locations?:{name:string;pose:number[]}[];pendingLocation?:number[]|null;onDraftError?:(message:string)=>void}> = ({course,presentation='astro',steps=[],spatial,onRobotFocus,selectionEnabled=true,overviewPanel=false,overview=false,showPerception=true,showVoxels=true,drafting=false,onDraft,locations=[],pendingLocation=null,onDraftError=()=>{}}) => {
 
   const viewportRef = useRef<HTMLDivElement>(null);
 
@@ -362,7 +363,7 @@ export const Viewport3D: React.FC<{course?: Course | null;presentation?:'astro'|
 
   return (
 
-    <div ref={viewportRef} className="robot-viewport" data-rendering={rendering}><RenderGuard>
+    <div ref={viewportRef} className="robot-viewport" data-rendering={rendering} data-waypoint-count={draftedPoints.length} data-drafting={drafting}><RenderGuard>
 
       <Canvas frameloop={rendering ? 'always' : 'never'} dpr={[1,1.5]} gl={{antialias:true,powerPreference:"high-performance"}} camera={{ position: [3.6, 2.2, 4.4], fov: 45 }} >
 
@@ -370,7 +371,7 @@ export const Viewport3D: React.FC<{course?: Course | null;presentation?:'astro'|
 
         {presentation==='operator'&&<><color attach="background" args={[colorMode==='light'?'#dce3e8':'#111318']}/><fog attach="fog" args={[colorMode==='light'?'#dce3e8':'#111318',planView?80:8,planView?150:28]}/></>}
 
-        {drafting && onDraft && <mesh rotation={[-Math.PI/2,0,0]} position={[0,.012,0]} onClick={event=>{event.stopPropagation();const b=spatial?.fleet?.environment?.bounds || [-6,-6,6,6];if(event.point.z>=b[0]&&event.point.x>=b[1]&&event.point.z<=b[2]&&event.point.x<=b[3])onDraft(event.point.z,event.point.x)}}><planeGeometry args={[200,200]}/><meshBasicMaterial transparent opacity={0} depthWrite={false}/></mesh>}
+        {onDraft&&<FloorPicker enabled={drafting} owner={selectedRobotId||''} bounds={spatial?.fleet?.environment?.bounds||[-2.5,-3.5,4.5,3.5]} onPick={onDraft} onError={onDraftError}/>}
 
         {planView?<OrthographicCamera makeDefault position={[0,30,0]} up={[0,0,-1]} zoom={80} near={0.01} far={150}/>:<PerspectiveCamera makeDefault position={[2.8,2.3,3.6]} fov={45}/>}
 
@@ -436,10 +437,11 @@ export const Viewport3D: React.FC<{course?: Course | null;presentation?:'astro'|
 
         {presentation==='operator'&&<SpatialFloor light={colorMode==='light'}/>}
 
-        {presentation==='operator'&&locations.map(location=><group key={location.name} position={[location.pose[1],.025,location.pose[0]]}><mesh rotation={[-Math.PI/2,0,0]}><ringGeometry args={[.075,.095,32]}/><meshBasicMaterial color="#69d7b1"/></mesh><Html position={[0,.25,0]} center style={{pointerEvents:'none'}}><span className="hud-location-pin">{location.name}</span></Html></group>)}
+        {presentation==='operator'&&locations.map(location=><group key={location.name} position={[location.pose[1],.025,location.pose[0]]}><mesh rotation={[-Math.PI/2,0,0]}><ringGeometry args={[.075,.095,32]}/><meshBasicMaterial color="#69d7b1"/></mesh><Html position={[0,.25,0]} center style={{pointerEvents:'none'}}><span className="hud-location-pin" data-location={location.name}>{location.name}</span></Html></group>)}
+        {presentation==='operator'&&pendingLocation&&<group position={[pendingLocation[1],.03,pendingLocation[0]]}><mesh rotation={[-Math.PI/2,0,0]}><ringGeometry args={[.10,.14,32]}/><meshBasicMaterial color="#f6b36d"/></mesh><Html position={[0,.25,0]} center style={{pointerEvents:'none'}}><span className="hud-location-pin" data-testid="pending-location">New location</span></Html></group>}
         {presentation==='operator'&&waypoints.length>1&&<Line points={waypoints} color="#38bdf8" lineWidth={2} dashed dashSize={0.12} gapSize={0.08}/>}
 
-        {presentation==='operator'&&waypoints.map((point,i)=><mesh key={i} position={point} rotation={[-Math.PI/2,0,0]}><ringGeometry args={[0.055,0.08,24]}/><meshBasicMaterial color="#38bdf8"/></mesh>)}
+        {presentation==='operator'&&draftedPoints.map((point,i)=><mesh key={i} position={point} rotation={[-Math.PI/2,0,0]}><ringGeometry args={[0.055,0.08,24]}/><meshBasicMaterial color="#38bdf8"/></mesh>)}
 
         
 

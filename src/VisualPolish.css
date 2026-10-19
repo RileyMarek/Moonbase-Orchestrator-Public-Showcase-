@@ -209,3 +209,7 @@ html:has(.operator-app),body:has(.operator-app),#root:has(.operator-app){min-wid
 .hud-fleet-row .hud-fleet-unit span:nth-child(2){min-width:0;overflow-wrap:anywhere}
 .hud-fleet-delete{flex:none;padding:10px!important;border:1px solid #bd756b55!important;border-radius:10px!important;color:#d29187!important;background:transparent!important}
 .hud-fleet-delete:hover:not(:disabled){background:#bd756b22!important}
+
+.hud-drawer-picking{visibility:hidden;pointer-events:none}
+.hud-bookmark-row{display:flex;gap:8px;align-items:center}
+.hud-bookmark-row>button:first-child{flex:1;min-width:0}

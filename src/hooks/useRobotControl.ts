@@ -180,10 +180,7 @@ export function useRobotControl(enabled: boolean) {
               { id: 'divider', center: [0.5, 1.3, 0.5], size: [1.2, 0.5, 1] },
               { id: 'outer', center: [3, 0.9, 0.5], size: [0.4, 1.4, 1] },
             ],
-            landmarks: {
-              Home: { pose: [0, 0, 0], evidence: 'Base origin' },
-              Terminal: { pose: [2.1, 1.9, 0], evidence: 'Corridor inspection point' },
-            },
+            landmarks: Object.fromEntries(Object.entries(demoState.bookmarks.items).map(([name,location])=>[name,{pose:location.pose,evidence:'Saved demo location'}])),
           },
         },
         globalNavigation: {

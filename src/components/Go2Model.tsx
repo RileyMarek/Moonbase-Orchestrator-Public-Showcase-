@@ -25,13 +25,13 @@ export function Go2Model({ robotId, color }: { robotId: string; color: string })
   useFrame(() => {
     if (!root.current) return;
     // Odom is the base-link height. Registry-only previews use a neutral standing height.
-    root.current.position.y = getPoseFrame(robotId) ? 0 : .32;
+    root.current.position.y = .32;
     const frame = getJointFrame(robotId);
     if (frame && performance.now() - frame.receivedAt < 2000 && frame.sequence !== sequence.current) {
       applyGo2Pose(rig.current, frame.joints);
       sequence.current = frame.sequence;
     }
-  });
+  }, -2);
   const bind = (name: string) => (node: Group | null) => {
     if (node) rig.current.set(name, node); else rig.current.delete(name);
   };

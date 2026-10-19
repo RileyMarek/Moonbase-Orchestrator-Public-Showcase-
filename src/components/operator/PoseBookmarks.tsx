@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Trash2 } from 'lucide-react';
 import type { BookmarkList } from '../../hooks/usePoseBookmarks';
 
 export function PoseBookmarks({data,pin,onPin,onSaved,onGo,send,enabled,error,onRefresh,choosing=false}: {
@@ -11,6 +12,12 @@ export function PoseBookmarks({data,pin,onPin,onSaved,onGo,send,enabled,error,on
   const [heading,setHeading]=useState('0');
   const [pending,setPending]=useState(false);
   const [message,setMessage]=useState('');
+  async function remove(name:string){
+    setPending(true);setMessage('');
+    try{const result=await send('/bookmarks/delete',{name}) as BookmarkList;onSaved(result);setMessage(`Deleted ${name}`);}
+    catch(error){setMessage(error instanceof Error?error.message:'Location could not be deleted');}
+    finally{setPending(false);}
+  }
   async function save(current:boolean){
     setPending(true);setMessage('');
     try{
@@ -28,7 +35,14 @@ export function PoseBookmarks({data,pin,onPin,onSaved,onGo,send,enabled,error,on
     {choosing&&<p role="status">Click the floor outside this panel to choose the location. Esc cancels.</p>}
     {pin&&<div className="hud-pin-editor"><span>Pin · X {pin[0].toFixed(2)} / Y {pin[1].toFixed(2)} m</span><label>Camera heading · degrees<input type="number" aria-label="Bookmark heading" value={heading} min="-180" max="180" onChange={e=>setHeading(e.target.value)}/></label><button disabled={!enabled||pending||!name.trim()||!Number.isFinite(Number(heading))} onClick={()=>void save(false)}>Save pin</button></div>}
     {message&&<p role="status">{message}</p>}{error&&<p role="status">{error}</p>}
-    <div className="hud-bookmark-list">{Object.entries(data.items).map(([key,item])=><button key={key} disabled={!enabled||!item.available} title={item.reason || 'Prepare instruction; Go dispatches it'} onClick={()=>onGo(key)}><span><b>{item.label}</b><small>{item.pose.slice(0,2).map(v=>v.toFixed(2)).join(' / ')} m · {Math.round(item.pose[2]*180/Math.PI)}°{item.visual_target?` · ${item.visual_target}`:''}</small></span><span>{item.available?'Use →':'Unavailable'}</span></button>)}</div>
+    <div className="hud-bookmark-list">{Object.entries(data.items).map(([key,item])=>
+      <div className="hud-bookmark-row" key={key}>
+        <button disabled={!enabled||pending||!item.available} title={item.reason || 'Prepare instruction; Go dispatches it'} onClick={()=>onGo(key)}>
+          <span><b>{item.label}</b><small>{item.pose.slice(0,2).map(v=>v.toFixed(2)).join(' / ')} m · {Math.round(item.pose[2]*180/Math.PI)}°{item.visual_target?` · ${item.visual_target}`:''}</small></span><span>{item.available?'Use →':'Unavailable'}</span>
+        </button>
+        <button className="hud-fleet-delete" aria-label={`Delete location ${key}`} title="Delete location" disabled={!enabled||pending} onClick={()=>void remove(key)}><Trash2 size={15}/></button>
+      </div>
+    )}</div>
     {!Object.keys(data.items).length&&<p>No saved locations in this environment yet.</p>}
     <button className="hud-bookmarks-refresh" onClick={onRefresh}>Refresh locations</button>
   </section>;

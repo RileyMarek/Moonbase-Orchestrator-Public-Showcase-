@@ -1,4 +1,7 @@
-import { useState } from "react";
+import { useAppStore } from '../store';
+import { useDemoState } from '../demo/state';
+import { appendDraftWaypoint } from '../domain/waypointDraft';
+import { useEffect, useState } from "react";
 import type { ControlSnapshot } from "./useRobotControl";
 import type { MissionStep } from "../domain/types";
 import { nextSequenceId, sequenceBlocker } from "../telemetry/sequenceGate";
@@ -17,7 +20,11 @@ export function useMissionController(
   send: (path: string, body?: object) => Promise<unknown>,
   enabled: boolean,
 ) {
-  const [steps, setSteps] = useState<MissionStep[]>([]);
+  const owner=useAppStore(s=>s.selectedRobotId)||'';
+  const roster=useAppStore(s=>s.robots.map(r=>r.id).join('|'));
+  const locationsRevision=useDemoState(s=>s.bookmarks.revision);
+  const [drafts,setDrafts]=useState<Record<string,MissionStep[]>>({});
+  const steps=drafts[owner]||[];
   const [plan, setPlan] = useState<{id:string;objective:string;steps:MissionStep[];verification:string;session_id?:string}|null>(null);
   const [oneWaypoint, setOneWaypoint] = useState(false);
   const [courseId, setCourseId] = useState<string | null>(null);
@@ -51,10 +58,16 @@ export function useMissionController(
   );
   const canRun = !runBlocked && !agentActive && !held;
   function edit(next: MissionStep[]) {
-    setSteps(next);
+    setDrafts(previous=>({...previous,[owner]:next}));
     setRequest(null);
     setError("");
   }
+  function appendWaypoint(x:number,y:number) {
+    setDrafts(previous=>({...previous,[owner]:appendDraftWaypoint(previous[owner]||[],x,y)}));
+    setRequest(null);setError('');
+  }
+  useEffect(()=>{setPlan(null);setRequest(null);setError('');},[owner,locationsRevision]);
+  useEffect(()=>{const ids=new Set(roster.split('|'));setDrafts(previous=>Object.fromEntries(Object.entries(previous).filter(([id])=>ids.has(id))));},[roster]);
   async function perform(path: string, body: object = {}) {
     setPending(true);
     setError("");
@@ -90,7 +103,9 @@ export function useMissionController(
       ...(courseId ? { course_id: courseId } : {}),
     };
     setRequest(body);
-    return perform("/mission", body);
+    const accepted=await perform("/mission", body);
+    if(accepted)setDrafts(previous=>({...previous,[owner]:[]}));
+    return accepted;
   }
   async function startAgent() {
     if (!enabled || pending || !goal.trim())
@@ -131,6 +146,7 @@ export function useMissionController(
     runBlocked,
     canRun,
     edit,
+    appendWaypoint,
     changeCourse,
     start,
     held,

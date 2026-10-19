@@ -4,7 +4,7 @@ import type { DemoPose } from './motion';
 import { OBSTACLES } from '../telemetry/demoMockStream';
 
 // Conservative circles cover the presentation models, including Carter's rear overhang.
-export const BODY_RADIUS: Record<Robot['type'], number> = { humanoid: .45, quadruped: .5, amr: .65 };
+export const BODY_RADIUS: Record<Robot['type'], number> = { humanoid: .6, quadruped: .5, amr: .65 };
 export const CLEARANCE = .1;
 export const DEMO_BOUNDS = [-2.5,-3.5,4.5,3.5] as const;
 export interface DemoBody { id: string; type: Robot['type']; x: number; y: number }
