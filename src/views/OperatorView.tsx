@@ -56,7 +56,7 @@ export function OperatorView() {
   const [pin,setPin]=useState<number[]|null>(null);
   const bookmarks=usePoseBookmarks(snapshot?.robotId || '',snapshot?.fleet?.environment?.revision);
 
-  const [perception, setPerception] = useState(true);
+
 
   const [voxels, setVoxels] = useState(false);
 
@@ -105,7 +105,7 @@ export function OperatorView() {
 
       <Viewport3D presentation="operator" spatial={sim ? snapshot : null} course={sim ? snapshot?.course : null}
 
-        selectionEnabled={!m.locked} overviewPanel={drawer==='fleet'} onRobotFocus={()=>{setOverview(false);setDrawer(null);}} overview={overview} showPerception={perception} showVoxels={voxels} steps={rows}
+        selectionEnabled={!m.locked} overviewPanel={drawer==='fleet'} onRobotFocus={()=>{setOverview(false);setDrawer(null);}} overview={overview} showPerception={drawer==='perception'} showVoxels={voxels} steps={rows}
 
         locations={Object.values(bookmarks.data.items).filter(b=>b.available).map(b=>({name:b.label,pose:b.pose}))}
         drafting={(placing || pinning) && !m.locked} onDraft={(x,y) => {if(pinning){setPin([Number(x.toFixed(2)),Number(y.toFixed(2))]);setPinning(false);setDrawer('bookmarks');}else m.edit([...m.steps,{kind:'walk',x:Number(x.toFixed(2)),y:Number(y.toFixed(2)),tolerance:.1,timeout_sec:180,global_route:true}]);}}/>
@@ -137,7 +137,7 @@ export function OperatorView() {
       <button aria-pressed={placing} disabled={m.locked || !sim} onClick={()=>{setOverview(false);setPinning(false);setPlacing(!placing);m.setMode('manual')}}><Crosshair size={20}/> Waypoints</button>
       <button aria-pressed={drawer==='bookmarks'||pinning} onClick={()=>open('bookmarks')}><Search size={20}/> Locations</button>
 
-      <button aria-pressed={perception} onClick={()=>{setPerception(!perception);open('perception')}}><Radio size={20}/> Perception</button>
+      <button aria-pressed={drawer==='perception'} onClick={()=>open('perception')}><Radio size={20}/> Perception</button>
 
       <button aria-pressed={voxels} onClick={()=>setVoxels(!voxels)}><Box size={20}/> Voxels</button>
 

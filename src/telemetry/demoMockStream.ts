@@ -37,6 +37,10 @@ export function sampleDemo(seconds: number) {
 export function demoVoxelSnapshot() {
   const cells = new Map<string, number[]>();
   const resolution = 0.1;
+  // A sparse synthetic floor makes occupancy visible around every embodiment,
+  // including units outside the two obstacle surfaces. Quantized on the same grid.
+  for (let x=-60; x<=60; x+=3) for (let y=-60; y<=60; y+=3)
+    cells.set(`${x},${y},0`,[x,y,0]);
   for (const box of OBSTACLES) {
     const bounds = box.center.map((c, i) => [
       Math.round((c - box.size[i] / 2) / resolution),

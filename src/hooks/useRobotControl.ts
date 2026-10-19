@@ -6,6 +6,7 @@ import type { WaypointProof } from '../domain/waypointProof';
 import { demoAction } from '../demo/actions';
 import { demoCourse, useDemoState } from '../demo/state';
 import { getPoseFrame } from '../telemetry/jointStream';
+import { voxelStream } from '../telemetry/voxelStream';
 
 export const ACTION_URL = '';
 
@@ -60,16 +61,22 @@ export function useRobotControl(enabled: boolean) {
       const currentRobot = selectedId || 'bot-01';
       const demoState = useDemoState.getState();
       const isPaused = demoState.paused;
+      const robotMotion = demoState.motion[currentRobot];
+      const speed = isPaused ? 0 : robotMotion?.speed || 0;
+      const stream = voxelStream(currentRobot);
       const poseFrame = getPoseFrame(currentRobot);
       const yaw = poseFrame ? 2 * Math.atan2(poseFrame.orientation[2], poseFrame.orientation[3]) : 0;
       const pose = poseFrame ? [poseFrame.position[0], poseFrame.position[1], yaw] : [0, 0, 0];
 
+      const mission = demoState.missionRobotId===currentRobot ? demoState.mission : undefined;
+      const command = mission?.state==='running' ? mission.steps.find(s=>s.state!=='succeeded')?.command : undefined;
+      const remaining = command?.kind==='walk' ? Math.hypot(command.x!-pose[0],command.y!-pose[1]) : 0;
       const nextSnapshot: ControlSnapshot = {
         robotId: currentRobot,
         ready: true,
         busy: false,
         runtimeFresh: true,
-        speed_m_s: isPaused ? 0 : 0.72 + 0.04 * Math.sin(now / 400),
+        speed_m_s: speed,
         course: demoCourse,
         pose,
         runtime: {
@@ -82,7 +89,7 @@ export function useRobotControl(enabled: boolean) {
           stop_controller_qualified: true,
         },
         displayTelemetry: {
-          speed: isPaused ? 0 : 0.72 + 0.04 * Math.sin(now / 400),
+          speed: speed,
           hz: 20.0 + 0.2 * Math.cos(now / 600),
           depth: 0.45 + 0.03 * Math.sin(now / 500),
           updatedAt: now,
@@ -94,9 +101,9 @@ export function useRobotControl(enabled: boolean) {
           error: '',
           age_s: 0.05,
           map: {
-            voxels: 1420 + Math.floor(15 * Math.sin(now / 1000)),
+            voxels: stream.cells.size,
             new_voxels: 35,
-            resolution_m: 0.05,
+            resolution_m: stream.resolution,
             saturated: false,
           },
           camera: {
@@ -108,13 +115,13 @@ export function useRobotControl(enabled: boolean) {
         },
         cloud: {
           ready: true,
-          provider: 'Gemini 1.5 Flash / Molmo Spatial',
-          model_id: 'molmo-7b-d-0924',
+          provider: demoState.provider,
+          model_id: 'Local demo command parser',
           error: '',
-          readiness: 'Spatial reasoning pipeline active',
+          readiness: 'Scripted local preview; no live inference',
         },
         preview: demoState.preview,
-        mission: demoState.mission,
+        mission,
         navigation: {
           state: isPaused ? 'held' : 'tracking',
           controller: 'Unified_PPO_Locomotion',
@@ -123,16 +130,16 @@ export function useRobotControl(enabled: boolean) {
           hz: 20.0,
         },
         planning: {
-          stationary: isPaused,
+          stationary: speed < .005,
           stationary_window_sec: 1.5,
           cloud_deadline_sec: 2.0,
           blocked: [],
         },
         motion: {
-          state: isPaused ? 'held' : 'active',
-          kind: 'walk',
+          state: isPaused ? 'held' : speed > .005 ? 'active' : 'idle',
+          kind: command?.kind || 'walk',
           progress: ((now / 2000) % 1),
-          remaining: isPaused ? 0 : 0.45,
+          remaining,
           message: isPaused ? 'Stance held · Ready' : 'Synthesizing gait trajectory',
         },
         session: {
@@ -141,7 +148,7 @@ export function useRobotControl(enabled: boolean) {
           components: [
             { id: 'telemetry', ready: true, message: 'Synthetic 60Hz Telemetry' },
             { id: 'kinematics', ready: true, message: '19-DOF Rig Active' },
-            { id: 'perception', ready: true, message: 'Molmo Spatial Pipeline Ready' },
+            { id: 'perception', ready: true, message: 'Synthetic demo only' },
           ],
           blockers: [],
         },
@@ -181,7 +188,7 @@ export function useRobotControl(enabled: boolean) {
           ready: true,
           state: isPaused ? 'idle' : 'tracking',
           localization: 'Isaac Ground Truth',
-          path: [[0, 0], [1.9, 0], [1.9, 2.1]],
+          path: mission?.state==='running' ? [pose.slice(0,2),...mission.steps.filter(s=>s.state!=='succeeded'&&s.command.kind==='walk').map(s=>[s.command.x!,s.command.y!])] : [],
         },
       };
 

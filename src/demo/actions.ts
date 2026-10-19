@@ -1,6 +1,7 @@
 import { useAppStore, type Robot } from '../store';
 import { demoCourse, useDemoState } from './state';
 import type { MissionStep } from '../domain/types';
+import { planDemoTask, validateDemoSteps } from './planner';
 
 /** Local UI simulator only. No transport, controller, inference, or robot dispatch. */
 export async function demoAction(path: string, input: object = {}): Promise<unknown> {
@@ -19,17 +20,22 @@ export async function demoAction(path: string, input: object = {}): Promise<unkn
     return { demo: true };
   }
   if (path === '/mission/plan') {
+    const robot = useAppStore.getState().robots.find(r => r.id === useAppStore.getState().selectedRobotId);
+    const pose = state.motion[robot?.id || ''] || { x: robot?.position[2] || 0, y: robot?.position[0] || 0, yaw: 0, speed: 0 };
     const plan = { id: crypto.randomUUID(), objective: String(body.task || 'Demo route'),
-      steps: structuredClone(demoCourse.steps), verification: 'Scripted demo route. No VLM inference or obstacle avoidance is performed.' };
+      steps: planDemoTask(String(body.task || ''), state.bookmarks, pose), verification: 'Local demo command parser. Kinematic motion only; no VLM inference or obstacle avoidance.' };
     useDemoState.setState({ plan }); return plan;
   }
   if (path === '/mission' || path === '/mission/execute-plan') {
+    if (state.mission && ['running','held'].includes(state.mission.state)) throw new Error('Finish or cancel the active demo mission first');
+    if (path === '/mission/execute-plan' && body.plan_id !== state.plan?.id) throw new Error('Draft the instruction again before running it');
     const steps = path === '/mission' ? body.steps as MissionStep[] : state.plan?.steps;
     if (!steps?.length) throw new Error('Add a demo sequence first');
+    const validated = validateDemoSteps(steps);
     useDemoState.setState({ paused: false, missionStarted: state.time,
       missionRobotId: useAppStore.getState().selectedRobotId || 'bot-01',
       mission: { id: String(body.id || crypto.randomUUID()), objective: state.plan?.objective,
-        state: 'running', steps: steps.map(command => ({ command, state: 'pending' })) } });
+        state: 'running', steps: validated.map(command => ({ command, state: 'pending' })) } });
     return { demo: true };
   }
   if (path === '/course') { useDemoState.setState({ courseLoaded: body.loaded === true }); return { demo: true }; }
