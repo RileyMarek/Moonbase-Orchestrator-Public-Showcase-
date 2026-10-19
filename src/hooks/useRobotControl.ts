@@ -145,6 +145,44 @@ export function useRobotControl(enabled: boolean) {
           ],
           blockers: [],
         },
+        fleet: {
+          epoch: 'public-demo-epoch',
+          fresh: true,
+          robots: [
+            { robot_id: 'bot-01', embodiment_type: 'humanoid', namespace: '/bot_01', initial_pose: [0, 0, 0], navigation_ready: true },
+            { robot_id: 'carter-01', embodiment_type: 'wheeled_amr', namespace: '/carter_01', initial_pose: [-1.6, -2, 0], navigation_ready: true },
+            { robot_id: 'go2-01', embodiment_type: 'quadruped', namespace: '/go2_01', initial_pose: [1.2, -2, 0], navigation_ready: true },
+          ],
+          catalog: {
+            humanoid: { label: 'Unitree H1', asset: 'h1.glb', controller: 'Unified_PPO_Locomotion' },
+            wheeled_amr: { label: 'Nova Carter', asset: null, controller: 'DiffDrive' },
+            quadruped: { label: 'Unitree Go2', asset: null, controller: 'Quadruped_Trot' },
+            semi_humanoid: { label: 'Manipulator AMR', asset: null, controller: null },
+          },
+          environment_fresh: true,
+          environment: {
+            id: 'elbow-v1',
+            epoch: 'public-demo-epoch',
+            revision: 'demo-rev-1',
+            frame: 'world',
+            bounds: [-2.5, -3.5, 4.5, 3.5],
+            localization: 'Isaac Sim Ground Truth',
+            obstacles: [
+              { id: 'divider', center: [0.5, 1.3, 0.5], size: [1.2, 0.5, 1] },
+              { id: 'outer', center: [3, 0.9, 0.5], size: [0.4, 1.4, 1] },
+            ],
+            landmarks: {
+              Home: { pose: [0, 0, 0], evidence: 'Base origin' },
+              Terminal: { pose: [2.1, 1.9, 0], evidence: 'Corridor inspection point' },
+            },
+          },
+        },
+        globalNavigation: {
+          ready: true,
+          state: isPaused ? 'idle' : 'tracking',
+          localization: 'Isaac Ground Truth',
+          path: [[0, 0], [1.9, 0], [1.9, 2.1]],
+        },
       };
 
       setSnapshot(nextSnapshot);

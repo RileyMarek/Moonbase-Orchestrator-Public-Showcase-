@@ -26,6 +26,7 @@ export type TelemetryStatus =
 
 export function useSimSocket() {
   const appMode = useAppStore((state) => state.appMode);
+  const updateRobotPosition = useAppStore((state) => state.updateRobotPosition);
   const updateRobotJoints = useAppStore((state) => state.updateRobotJoints);
   const updateRobotDynamics = useAppStore((state) => state.updateRobotDynamics);
   const [status, setStatus] = useState<TelemetryStatus>("live");
@@ -52,17 +53,100 @@ export function useSimSocket() {
     let activeTime = 0;
     let lastTick = performance.now();
 
+    const robotStates: Record<string, { x: number; z: number; yaw: number }> = {
+      "bot-01": { x: 0, z: 0, yaw: 0 },
+      "carter-01": { x: -2, z: -1.6, yaw: 0 },
+      "go2-01": { x: -2, z: 1.2, yaw: 0 },
+    };
+
     function loop(now: number) {
-      const dt = (now - lastTick) / 1000;
+      const dt = Math.min((now - lastTick) / 1000, 0.1);
       lastTick = now;
-      const isPaused = useDemoState.getState().paused;
+      const demoState = useDemoState.getState();
+      const isPaused = demoState.paused;
       if (!isPaused) {
         activeTime += dt;
       }
       const elapsed = activeTime;
       const demo = sampleDemo(elapsed);
       const stamp = Date.now();
+      const currentSelected = useAppStore.getState().selectedRobotId || "bot-01";
+      const activeMission = demoState.mission;
 
+      // Keep voxel streams fresh so sensorFresh never expires
+      const vNow = performance.now();
+      voxelStream("bot-01").receivedAt = vNow;
+      voxelStream("carter-01").receivedAt = vNow;
+      voxelStream("go2-01").receivedAt = vNow;
+
+      // Handle custom mission waypoint navigation
+      if (!isPaused && activeMission && activeMission.state === 'running' && activeMission.steps.length > 0) {
+        const pendingIndex = activeMission.steps.findIndex(s => s.state !== 'succeeded');
+        if (pendingIndex >= 0) {
+          const step = activeMission.steps[pendingIndex];
+          if (step.command.kind === 'walk' && Number.isFinite(step.command.x) && Number.isFinite(step.command.y)) {
+            const targetThreeX = step.command.y!;
+            const targetThreeZ = step.command.x!;
+            const rState = robotStates[currentSelected] || robotStates["bot-01"];
+            const dx = targetThreeX - rState.x;
+            const dz = targetThreeZ - rState.z;
+            const dist = Math.hypot(dx, dz);
+            const targetYaw = Math.atan2(dx, dz);
+
+            if (dist > 0.12) {
+              const angleDiff = Math.atan2(Math.sin(targetYaw - rState.yaw), Math.cos(targetYaw - rState.yaw));
+              rState.yaw += Math.sign(angleDiff) * Math.min(Math.abs(angleDiff), 3.0 * dt);
+              const stepDist = Math.min(dist, 0.85 * dt);
+              rState.x += Math.sin(rState.yaw) * stepDist;
+              rState.z += Math.cos(rState.yaw) * stepDist;
+            } else {
+              step.state = 'succeeded';
+              if (pendingIndex === activeMission.steps.length - 1) {
+                useDemoState.setState({
+                  mission: {
+                    ...activeMission,
+                    state: 'succeeded',
+                  }
+                });
+              }
+            }
+          } else {
+            step.state = 'succeeded';
+          }
+        }
+      } else if (!isPaused && (!activeMission || activeMission.state !== 'running')) {
+        // Cyclic background patrol for H1 when no user mission is running
+        const cycle = elapsed % 24;
+        let px = 0;
+        let pz = 0;
+        let pyaw = 0;
+        if (cycle < 8) {
+          pz = (cycle / 8) * 1.9;
+          px = 0;
+          pyaw = 0;
+        } else if (cycle < 10) {
+          pz = 1.9;
+          px = 0;
+          pyaw = ((cycle - 8) / 2) * (Math.PI / 2);
+        } else if (cycle < 18) {
+          pz = 1.9;
+          px = ((cycle - 10) / 8) * 2.1;
+          pyaw = Math.PI / 2;
+        } else {
+          const back = (cycle - 18) / 6;
+          pz = 1.9 * (1 - back);
+          px = 2.1 * (1 - back);
+          pyaw = Math.PI;
+        }
+        robotStates["bot-01"].x = px;
+        robotStates["bot-01"].z = pz;
+        robotStates["bot-01"].yaw = pyaw;
+      }
+
+      // Publish H1 Humanoid frames
+      const h1State = robotStates["bot-01"];
+      const qzH1 = Math.sin(h1State.yaw / 2);
+      const qwH1 = Math.cos(h1State.yaw / 2);
       publishJointFrame({
         robotId: "bot-01",
         joints: demo.joints,
@@ -70,45 +154,20 @@ export function useSimSocket() {
         efforts: demo.efforts,
         stamp,
       });
-
-      // Synthetic traversal through elbow-v1 for H1
-      const cycle = elapsed % 24;
-      let x = 0;
-      let y = 0;
-      let yaw = 0;
-      if (cycle < 8) {
-        x = (cycle / 8) * 1.9;
-        y = 0;
-        yaw = 0;
-      } else if (cycle < 10) {
-        x = 1.9;
-        y = 0;
-        yaw = ((cycle - 8) / 2) * (Math.PI / 2);
-      } else if (cycle < 18) {
-        x = 1.9;
-        y = ((cycle - 10) / 8) * 2.1;
-        yaw = Math.PI / 2;
-      } else {
-        const back = (cycle - 18) / 6;
-        x = 1.9 * (1 - back);
-        y = 2.1 * (1 - back);
-        yaw = Math.PI;
-      }
-
-      const qz = Math.sin(yaw / 2);
-      const qw = Math.cos(yaw / 2);
-
       publishPoseFrame({
         robotId: "bot-01",
-        position: [x, y, 0],
-        orientation: [0, 0, qz, qw],
+        position: [h1State.z, h1State.x, 0],
+        orientation: [0, 0, qzH1, qwH1],
         stamp,
       });
-
+      updateRobotPosition("bot-01", [h1State.x, 0, h1State.z]);
       updateRobotJoints("bot-01", demo.joints);
       updateRobotDynamics("bot-01", demo.efforts, demo.velocities);
 
-      // Synthesize Go2 quadruped kinematics
+      // Publish Go2 Quadruped frames
+      const go2State = robotStates["go2-01"];
+      const qzGo2 = Math.sin(go2State.yaw / 2);
+      const qwGo2 = Math.cos(go2State.yaw / 2);
       const trot = Math.sin(elapsed * 6);
       const trotCos = Math.cos(elapsed * 6);
       const go2Joints: Record<string, number> = {
@@ -131,8 +190,6 @@ export function useSimSocket() {
         go2Efforts[k] = 12.5 + 4.2 * Math.sin(elapsed * 4);
         go2Velocities[k] = 1.2 * Math.cos(elapsed * 6);
       }
-      updateRobotJoints("go2-01", go2Joints);
-      updateRobotDynamics("go2-01", go2Efforts, go2Velocities);
       publishJointFrame({
         robotId: "go2-01",
         joints: go2Joints,
@@ -142,12 +199,18 @@ export function useSimSocket() {
       });
       publishPoseFrame({
         robotId: "go2-01",
-        position: [-2, 0, 1.2],
-        orientation: [0, 0, 0, 1],
+        position: [go2State.z, go2State.x, 0],
+        orientation: [0, 0, qzGo2, qwGo2],
         stamp,
       });
+      updateRobotPosition("go2-01", [go2State.x, 0, go2State.z]);
+      updateRobotJoints("go2-01", go2Joints);
+      updateRobotDynamics("go2-01", go2Efforts, go2Velocities);
 
-      // Synthesize Carter AMR drive wheels
+      // Publish Carter AMR frames
+      const carterState = robotStates["carter-01"];
+      const qzCarter = Math.sin(carterState.yaw / 2);
+      const qwCarter = Math.cos(carterState.yaw / 2);
       const carterJoints: Record<string, number> = {
         left_wheel_joint: (elapsed * 5) % (Math.PI * 2),
         right_wheel_joint: (elapsed * 5) % (Math.PI * 2),
@@ -163,8 +226,6 @@ export function useSimSocket() {
         right_wheel_joint: 5.0,
         lidar_joint: 20.0,
       };
-      updateRobotJoints("carter-01", carterJoints);
-      updateRobotDynamics("carter-01", carterEfforts, carterVelocities);
       publishJointFrame({
         robotId: "carter-01",
         joints: carterJoints,
@@ -174,10 +235,13 @@ export function useSimSocket() {
       });
       publishPoseFrame({
         robotId: "carter-01",
-        position: [-2, 0, -1.6],
-        orientation: [0, 0, 0, 1],
+        position: [carterState.z, carterState.x, 0],
+        orientation: [0, 0, qzCarter, qwCarter],
         stamp,
       });
+      updateRobotPosition("carter-01", [carterState.x, 0, carterState.z]);
+      updateRobotJoints("carter-01", carterJoints);
+      updateRobotDynamics("carter-01", carterEfforts, carterVelocities);
 
       setMessages((m) => (m + 1) % 10000);
       rafId = requestAnimationFrame(loop);
@@ -188,7 +252,7 @@ export function useSimSocket() {
       cancelAnimationFrame(rafId);
       setJointConnection("disconnected");
     };
-  }, [appMode, updateRobotJoints, updateRobotDynamics]);
+  }, [appMode, updateRobotPosition, updateRobotJoints, updateRobotDynamics]);
 
   return { status, error, messages, close: () => {} };
 }
