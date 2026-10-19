@@ -1,0 +1,93 @@
+.fleet-config-shell{position:relative;isolation:isolate;overflow:hidden;min-height:440px;height:clamp(440px,34vw,570px);flex:none;transition:background .78s ease}
+.fleet-config-shell:before{transition:background .78s ease}
+.fleet-config-shell.phase-opening:before,.fleet-config-shell.phase-brain:before{background:#ebebe7}
+.fleet-config-shell>.circuit-frame{transition:transform .78s cubic-bezier(.2,.7,.2,1),filter .78s ease;z-index:5}
+.fleet-config-shell.phase-opening>.circuit-frame,.fleet-config-shell.phase-brain>.circuit-frame{transform:translateX(6px);filter:brightness(.7)}
+.fleet-config-shell .config-shift-lines{position:absolute;inset:0;z-index:6;pointer-events:none;overflow:hidden}
+.config-shift-lines span{position:absolute;height:3px;background:var(--accent);clip-path:polygon(0 0,calc(100% - 8px) 0,100% 100%,0 100%);transition:transform .78s cubic-bezier(.2,.7,.2,1),background .78s}
+.config-shift-lines span:nth-child(1){left:25%;top:2%;width:21%}
+.config-shift-lines span:nth-child(2){right:8%;top:11%;width:15%;height:1px;background:#777}
+.config-shift-lines span:nth-child(3){left:11%;bottom:7%;width:26%;height:1px;background:#818181}
+.config-shift-lines span:nth-child(4){right:11%;bottom:3%;width:17%}
+.phase-opening .config-shift-lines span:nth-child(1),.phase-brain .config-shift-lines span:nth-child(1){transform:translateX(42px)}
+.phase-opening .config-shift-lines span:nth-child(2),.phase-brain .config-shift-lines span:nth-child(2){transform:translateX(-30px)}
+.phase-opening .config-shift-lines span:nth-child(3),.phase-brain .config-shift-lines span:nth-child(3){transform:translateX(24px)}
+.phase-opening .config-shift-lines span:nth-child(4),.phase-brain .config-shift-lines span:nth-child(4){transform:translateX(-40px)}
+.fleet-face,.brain-face{position:absolute;inset:9px 6px 12px;z-index:2;min-width:0;overflow:auto;scrollbar-width:thin}
+.fleet-face{display:flex;flex-direction:column;color:#eee;opacity:1;transform:translateX(0)}
+.fleet-face .fleet-list{flex:1;max-height:none;min-height:0}
+.fleet-face .fleet-foot{margin-top:auto}
+.brain-face{display:flex;flex-direction:column;gap:10px;padding:20px 14px 15px;color:#1b1b1b;opacity:0;transform:translateX(30px);pointer-events:none;background:repeating-linear-gradient(0deg,transparent 0 4px,#19191907 4px 5px),radial-gradient(circle at 86% 35%,#ff8e3920,transparent 33%),#ebebe7}
+.phase-brain .fleet-face{opacity:0;transform:translateX(-26px);pointer-events:none}
+.phase-brain .brain-face{opacity:1;transform:translateX(0);pointer-events:auto}
+.phase-opening .fleet-face{animation:fleet-face-out .78s cubic-bezier(.2,.7,.2,1) both}
+.phase-opening .brain-face{animation:brain-face-in .78s cubic-bezier(.2,.7,.2,1) both}
+.phase-closing .fleet-face{animation:fleet-face-in .78s cubic-bezier(.2,.7,.2,1) both}
+.phase-closing .brain-face{animation:brain-face-out .78s cubic-bezier(.2,.7,.2,1) both}
+@keyframes fleet-face-out{0%,48%{opacity:1;transform:translateX(0)}100%{opacity:0;transform:translateX(-26px)}}
+@keyframes fleet-face-in{0%{opacity:0;transform:translateX(-26px)}52%,100%{opacity:1;transform:translateX(0)}}
+@keyframes brain-face-in{0%,39%{opacity:0;transform:translateX(30px)}100%{opacity:1;transform:translateX(0)}}
+@keyframes brain-face-out{0%{opacity:1;transform:translateX(0)}61%,100%{opacity:0;transform:translateX(30px)}}
+.fleet-select,.fleet-detail-select{display:block;background:none;border:0;color:inherit;cursor:pointer;text-align:left;padding:0}
+.fleet-select{display:flex;align-items:center;gap:7px;min-width:0;flex:1}
+.fleet-select strong{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fleet-detail-select{width:100%}
+.fleet-detail-select .robot-card-meta{margin:9px 0}
+.fleet-face .robot-card-top{gap:5px}
+.fleet-face .robot-card-top .unit-icon{flex:none;display:flex;align-items:center;justify-content:center;width:37px;height:37px;padding:0;border:0;border-radius:0;background:none;box-shadow:none}
+.fleet-face .unit-icon .bot-portrait{width:37px;height:37px}
+.brain-open{background:var(--accent);border:1px solid #ef9d67;color:#171717;border-radius:16px;padding:6px 7px;font:7px var(--display);letter-spacing:.2px;white-space:nowrap;cursor:pointer;flex:none}
+.bot-portrait{display:block;flex:none}
+.bot-portrait-eyes{opacity:0;transform-origin:center;transform-box:fill-box}
+.phase-opening .bot-portrait-blink .bot-portrait-eyes,.phase-closing .bot-portrait-blink .bot-portrait-eyes{animation:bot-eyes-double .52s .05s both}
+@keyframes bot-eyes-double{0%,11%,32%,57%,82%,100%{opacity:0;transform:scaleY(.2)}18%,26%,65%,74%{opacity:1;transform:scaleY(1)}}
+.brain-head{display:flex;align-items:center;gap:10px;border-bottom:1px solid #444;padding-bottom:7px;min-height:42px}
+.brain-head:after{content:'';position:absolute;top:63px;left:14px;width:36%;height:4px;background:var(--accent);clip-path:polygon(0 0,calc(100% - 8px) 0,100% 100%,0 100%)}
+.brain-back{width:27px;height:27px;flex:none;border:1px solid #373737;background:#1c1c1c;color:#ff8630;border-radius:50%;display:grid;place-items:center;cursor:pointer}
+.brain-head h2{margin:0;font:15px var(--display);letter-spacing:1px;white-space:nowrap}
+.brain-head small{display:block;color:#a54e19;font:6px var(--mono);letter-spacing:1px}
+.brain-head-id{margin-left:auto;color:#686868;font:8px var(--mono)}
+.brain-unit{display:flex;align-items:center;gap:8px;min-height:43px;border-bottom:1px solid #6665;font:11px var(--display)}
+.brain-unit .bot-portrait{background:none;border:0;border-radius:0;padding:0;width:37px;height:37px}
+.brain-unit span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.brain-unit small{display:block;color:#87502f;font:6px var(--mono);letter-spacing:1px}
+.config-row{position:relative;background:#faf9f5;border:1px solid #8d8d8d;clip-path:polygon(0 10px,10px 0,calc(100% - 13px) 0,100% 13px,100% calc(100% - 9px),calc(100% - 9px) 100%,9px 100%,0 calc(100% - 9px));padding:10px 10px 9px;min-height:140px;display:flex;flex-direction:column}
+.config-row:before{content:'';position:absolute;left:13px;top:0;width:26%;height:3px;background:var(--accent)}
+.config-row-head{display:flex;align-items:center;gap:5px;border-bottom:1px solid #8b8b8b;padding-bottom:4px}
+.config-row-head span{color:#d8621a;font:7px var(--mono)}
+.config-row-head h3{font:11px var(--display);letter-spacing:.2px;margin:0;white-space:nowrap}
+.config-row-body{display:grid;grid-template-columns:minmax(0,1fr) 86px;gap:1px;align-items:center;min-height:75px;flex:1}
+.config-row-body b{font:8px var(--display);overflow-wrap:anywhere}
+.config-row-body p{font:7px/1.4 var(--mono);color:#4f4f4f;margin:6px 0}
+.config-row-body small{font:6px var(--mono);color:#ab531d;overflow-wrap:anywhere}
+.config-diagram{width:86px;height:74px;max-width:100%}
+.config-change{display:flex;justify-content:center;align-items:center;gap:8px;width:100%;border:0;background:#242424;color:#f38a3c;cursor:pointer;font:8px var(--display);padding:8px;clip-path:polygon(6px 0,calc(100% - 6px) 0,100% 6px,100% calc(100% - 6px),calc(100% - 6px) 100%,6px 100%,0 calc(100% - 6px),0 6px)}
+.brain-foot{display:flex;justify-content:space-between;gap:5px;margin-top:auto;border-top:1px solid #888;padding-top:7px;font:6px var(--mono);color:#5e5e5e}
+.config-picker{position:absolute;inset:72px 13px 17px;z-index:7;overflow:auto;padding:18px 13px;background:#e9e9e6f5;border:1px solid #a75d28;box-shadow:0 0 0 20px #1118}
+.config-picker h3{font:12px var(--display);margin:0 0 11px}.config-picker p{font:8px/1.5 var(--mono);margin-bottom:15px}
+.config-picker button{display:block;width:100%;text-align:left;background:#242424;border:0;border-left:2px solid var(--accent);padding:10px;color:#ff914a;font:8px var(--mono);margin:6px 0;cursor:pointer}
+.fleet-config-shell button:focus-visible{outline:2px solid #ffa45e;outline-offset:2px}
+@media(max-width:650px){
+  .fleet-config-shell{height:450px;width:100%}
+  .brain-face{gap:7px;padding:15px 8px 10px}
+  .brain-head{gap:5px;min-height:36px}
+  .brain-head h2{font-size:11px;letter-spacing:.3px}
+  .brain-head small{font-size:5px;letter-spacing:0}
+  .brain-head-id{display:none}
+  .brain-back{width:23px;height:23px}
+  .brain-unit{min-height:36px;font-size:9px}
+  .fleet-face .robot-card-top .unit-icon,.fleet-face .unit-icon .bot-portrait{width:29px;height:29px}
+  .brain-unit .bot-portrait{width:29px;height:29px}
+  .config-row{min-height:137px;padding:9px 7px 7px}
+  .config-row-head h3{font-size:8.5px;letter-spacing:0}
+  .config-row-body{grid-template-columns:minmax(0,1fr) 43px;gap:1px;min-height:70px}
+  .config-row-body b{font-size:7px}
+  .config-row-body p{font-size:6px;line-height:1.25;margin:3px 0}
+  .config-row-body small{font-size:5px}
+  .config-diagram{width:43px;height:64px}
+  .config-change{font-size:7px;padding:7px}
+  .brain-foot{font-size:5px}
+}
+@media(prefers-reduced-motion:reduce){.fleet-config-shell,.fleet-config-shell:before,.fleet-config-shell>.circuit-frame,.config-shift-lines span{transition:none!important}.fleet-face,.brain-face,.bot-portrait-eyes{animation:none!important}}
+.brand-mark{border:0;outline:0;background:none;border-radius:0;clip-path:none;overflow:visible}
+.brand-mark .bot-portrait{width:100%;height:100%}
